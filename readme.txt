@@ -7,7 +7,7 @@ Tags:              updates, maintenance, plugins, themes, multisite, email, smtp
 Requires at least: 5.8
 Tested up to:      6.7
 Requires PHP:      8.0
-Stable tag:        1.4.7
+Stable tag:        1.4.8
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -168,6 +168,22 @@ Click **Resend** in the Sent Email History table. The email is rebuilt from the 
 ---
 
 == Frequently Asked Questions ==
+
+= Does the plugin support Avada theme updates? =
+
+Yes, with important notes. Avada Core and Avada Builder appear in the standard
+WordPress plugin update list once your Avada license is registered, and the plugin
+can update them normally. The Updates page shows a contextual notice when Avada is
+installed, explaining the required update order: Avada theme first, then Avada Core,
+then Avada Builder. A confirmation prompt appears if you select the Avada theme for
+update, reminding you to follow up with the companion plugins.
+
+Avada Patches are managed separately through Avada's own dashboard (Avada →
+Maintenance → Plugins & Add-Ons) and do not appear in the standard WordPress update
+API, so they cannot be detected or applied from this plugin. The Updates page
+includes a direct link to that dashboard so you can check after completing your
+regular updates.
+
 
 = Does this plugin support WordPress Multisite? =
 
@@ -374,6 +390,28 @@ The App Password method above works identically for Workspace accounts. Alternat
 
 == Changelog ==
 
+= 1.4.8 =
+* Feature: Avada theme detection. When the Avada theme is installed, the Updates
+  page shows a contextual notice explaining the required update order: Avada theme
+  first, then Avada Core, then Avada Builder. When Avada Core or Avada Builder
+  have available updates in the WordPress update transient, the notice lists them
+  by name so they are easy to find in the Plugins section below.
+* Feature: When Avada theme is selected for update and Update Selected is clicked,
+  a confirmation dialog reminds the administrator to update Avada Core and Avada
+  Builder afterward, in that order.
+* Feature: A direct link to the Avada Maintenance / Plugins & Add-Ons dashboard
+  is shown so the administrator can check for Avada Patches, which are managed
+  entirely within Avada's own dashboard and do not appear in the standard
+  WordPress update API.
+* Fix: SMTP From Name now correctly uses the value saved in Settings. Previously,
+  an empty string saved in smtp_from_name was used as-is via PHP's ?? operator,
+  causing PHPMailer to fall back to the site name. Fixed by using !empty() checks
+  so an empty string falls through to company_name then the site name.
+* Fix: "All selected items updated successfully" banner now clears at the start
+  of each new batch and is replaced by an in-progress indicator showing how many
+  items are being updated. The banner reappears only when the new batch completes.
+
+
 = 1.4.5 =
 * Added Gmail / Google Workspace SMTP support (smtp.gmail.com:587, requires App Password).
 * Added Microsoft / Outlook / Office 365 SMTP support (smtp.office365.com:587).
@@ -458,6 +496,10 @@ The App Password method above works identically for Workspace accounts. Alternat
 * 24-entry error code dictionary with plain-English explanations.
 
 == Upgrade Notice ==
+
+= 1.4.8 =
+Adds Avada theme detection and update order guidance. Fixes SMTP From Name using site name instead of configured value.
+
 
 = 1.4.5 =
 Adds Gmail and Microsoft SMTP support. No database changes.

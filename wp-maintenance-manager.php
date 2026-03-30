@@ -3,7 +3,7 @@
  * Plugin Name: WP Maintenance Manager
  * Plugin URI:  https://digitalstrategyworks.com
  * Description: Manage WordPress core, plugin, and theme updates with email reporting. Supports single-site and Multisite (network) installs.
- * Version:     1.4.7
+ * Version:     1.4.8
  * Author:      Tony Zeoli
  * Author URI:  https://digitalstrategyworks.com
  * License:     GPL-2.0+
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'WPMM_VERSION',    '1.4.7' );
+define( 'WPMM_VERSION',    '1.4.8' );
 define( 'WPMM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPMM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 

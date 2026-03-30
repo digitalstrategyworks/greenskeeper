@@ -424,6 +424,72 @@ function wpmm_render_updates() {
                 </div>
             <?php endif; ?>
 
+            <?php
+            // ── Avada detection ─────────────────────────────────────────────────────
+            // Check whether the Avada theme is active or installed.
+            // If so, show a contextual notice about the required update order for
+            // Avada Core and Avada Builder, and a link to Avada's Plugins dashboard.
+            $avada_active  = ( get_template() === 'Avada' || get_stylesheet() === 'Avada' );
+            $avada_theme   = wp_get_theme( 'Avada' );
+            $avada_present = $avada_theme->exists();
+
+            // Detect whether Avada Core / Builder have pending updates in the transient.
+            $avada_plugin_files = [
+                'avada-core'    => 'avada-core/avada-core.php',
+                'avada-builder' => 'fusion-builder/fusion-builder.php',
+            ];
+            $update_plugins = get_site_transient( 'update_plugins' );
+            $avada_pending  = [];
+            foreach ( $avada_plugin_files as $label => $file ) {
+                if ( ! empty( $update_plugins->response[ $file ] ) ) {
+                    $avada_pending[ $label ] = $update_plugins->response[ $file ]->new_version ?? '';
+                }
+            }
+
+            if ( $avada_active || $avada_present ) :
+            ?>
+            <div class="wpmm-avada-notice wpmm-card" style="margin-bottom:16px;border-left:4px solid #7c3aed;">
+                <h2 class="wpmm-card-title" style="color:#7c3aed;">
+                    <span class="dashicons dashicons-info-outline"></span> Avada Theme Detected
+                </h2>
+                <p style="margin:0 0 10px;font-size:13px;">
+                    Avada requires its companion plugins to be updated in a specific order.
+                    Always update them in this sequence to avoid compatibility issues:
+                </p>
+                <ol style="margin:0 0 12px 20px;font-size:13px;line-height:1.8;">
+                    <li><strong>Avada theme</strong> — update the theme first</li>
+                    <li><strong>Avada Core</strong> — update immediately after the theme</li>
+                    <li><strong>Avada Builder</strong> — update last</li>
+                </ol>
+                <?php if ( $avada_pending ) : ?>
+                    <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:10px 14px;margin-bottom:12px;">
+                        <strong style="color:#7c3aed;font-size:13px;">
+                            <span class="dashicons dashicons-warning" style="font-size:14px;vertical-align:middle;"></span>
+                            Avada companion plugin updates are available:
+                        </strong>
+                        <ul style="margin:6px 0 0 18px;font-size:13px;line-height:1.8;">
+                            <?php foreach ( $avada_pending as $label => $ver ) : ?>
+                                <li>
+                                    <strong><?php echo esc_html( ucwords( str_replace( '-', ' ', $label ) ) ); ?></strong>
+                                    <?php if ( $ver ) : ?>
+                                        &rarr; <?php echo esc_html( $ver ); ?>
+                                    <?php endif; ?>
+                                    — will appear in the Plugins section below
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+                <p style="margin:0;font-size:12px;color:#6b7280;">
+                    <strong>Avada Patches</strong> are managed separately through the
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=avada-maintenance' ) ); ?>" style="color:#7c3aed;">
+                        Avada &rarr; Maintenance &rarr; Plugins &amp; Add-Ons
+                    </a> page and do not appear in the standard WordPress update list.
+                    Check that page after completing updates here.
+                </p>
+            </div>
+            <?php endif; ?>
+
             <!-- Administrator override for this session -->
             <div class="wpmm-card" style="margin-bottom:16px;">
                 <h2 class="wpmm-card-title" style="margin-bottom:12px;">

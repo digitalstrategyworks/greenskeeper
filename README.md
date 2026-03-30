@@ -1,6 +1,6 @@
 # WP Maintenance Manager
 
-**Version:** 1.4.7  
+**Version:** 1.4.8  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Requires WordPress:** 5.8+  
@@ -107,6 +107,12 @@ WP Maintenance Manager replaces the ad hoc workflow of tab-switching between the
 - Stored credentials never exposed in HTML — only a masked placeholder
 - From Name and From Email fields
 - Send Test Email with real-time pass/fail reporting
+
+### Avada Theme Support
+- Detects when the Avada theme is installed and shows a contextual update-order notice
+- Lists any pending Avada Core / Avada Builder updates by name with new version numbers
+- Confirmation prompt when Avada theme is selected for update, reminding about companion plugin order
+- Direct link to Avada's Maintenance → Plugins & Add-Ons dashboard for checking Avada Patches (which are managed outside the standard WordPress update API)
 
 ### Multisite / Network
 - Works on both single-site and Multisite networks

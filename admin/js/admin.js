@@ -273,6 +273,23 @@ jQuery(function ($) {
             return;
         }
 
+        // Warn if Avada theme is selected — companion plugins must follow in order.
+        var avadaSelected = items.some(function (item) {
+            return item.type === 'theme' && item.slug === 'Avada';
+        });
+        if (avadaSelected) {
+            var msg = 'You have selected the Avada theme for update.\n\n'
+                    + 'After this update completes, you must also update:\n'
+                    + '  1. Avada Core\n'
+                    + '  2. Avada Builder\n\n'
+                    + 'Update them in that order from the Plugins section below, '
+                    + 'or visit Avada → Maintenance → Plugins & Add-Ons.\n\n'
+                    + 'Continue with the Avada theme update now?';
+            if (!window.confirm(msg)) {
+                return;
+            }
+        }
+
         // Reset state for a fresh batch: hide the previous success banner,
         // show an in-progress indicator.
         $('#wpmm-global-success').prop('hidden', true);
