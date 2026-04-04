@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * @param array $log_entries  Row objects from wpmm_update_log.
  * @param int   $admin_id     Optional override for the performing administrator.
  */
-function wpmm_build_email_body( $log_entries, $admin_id = 0 ) {
+function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [] ) {
 
     $site_name = get_bloginfo( 'name' );
     $site_url  = get_bloginfo( 'url' );
@@ -120,6 +120,42 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0 ) {
 
     if ( $sections === '' ) {
         $sections = "<p style='color:#6b7280;font-size:13px;margin:24px 0;'>No update entries were found for this session.</p>";
+    }
+
+    // ── Additional Manual Updates section ─────────────────────────────────────
+    if ( ! empty( $manual_entries ) ) {
+        $manual_rows = '';
+        foreach ( $manual_entries as $entry ) {
+            if ( empty( $entry['name'] ) ) continue;
+            $old = esc_html( $entry['old_version'] ?? '' );
+            $new = esc_html( $entry['new_version'] ?? '' );
+            $ver = $old . ( $new ? ' &rarr; <strong>' . $new . '</strong>' : '' );
+            $manual_rows .= "
+            <tr>
+              <td style='padding:10px 14px;border-bottom:1px solid #e5e7eb;'>
+                &#9989; <strong>" . esc_html( $entry['name'] ) . "</strong>
+                <br><small style='color:#9ca3af;'>" . $ver . "</small>
+              </td>
+              <td style='padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap;'>
+                <span style='color:#16a34a;font-weight:700;'>Updated Manually</span>
+              </td>
+            </tr>";
+        }
+        if ( $manual_rows ) {
+            $manual_note = "<p style='color:#6b7280;font-size:12px;font-style:italic;margin:8px 0 0;'>Plugins or themes updated manually outside the control of Site Maintenance Manager due to functional licensing issues that prevent this plugin from accessing the specific panels where these plugins are located in the plugin or theme admin.</p>";
+            $sections .= "
+        <h3 style='color:#1e3a5f;font-size:15px;margin:28px 0 10px;border-bottom:2px solid #e5e7eb;padding-bottom:6px;'>&#128295; Additional Manual Updates</h3>
+        " . $manual_note . "
+        <table width='100%' cellpadding='0' cellspacing='0' style='margin-top:10px;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;'>
+          <thead>
+            <tr style='background:#f3f4f6;'>
+              <th style='padding:9px 14px;text-align:left;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;'>Item</th>
+              <th style='padding:9px 14px;text-align:right;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;'>Status</th>
+            </tr>
+          </thead>
+          <tbody>" . $manual_rows . "</tbody>
+        </table>";
+        }
     }
 
     // ── Header: Site block (top) ──────────────────────────────────────────────

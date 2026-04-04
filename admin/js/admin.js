@@ -489,13 +489,18 @@ jQuery(function ($) {
         var lastSessionField = $('#wpmm-last-session-id').val();
         var resolvedSession  = updatesRanThisLoad ? sessionId : (lastSessionField || sessionId);
 
+        var manualEntries = (typeof window.wpmm_getManualEntries === 'function')
+            ? JSON.stringify(window.wpmm_getManualEntries())
+            : '[]';
+
         $.post(wpmm.ajax_url, {
-            action:     'wpmm_send_email',
-            nonce:      wpmm.nonce,
-            to_email:   toEmail,
-            subject:    subject,
-            session_id: resolvedSession,
-            admin_id:   performingAdminId
+            action:          'wpmm_send_email',
+            nonce:           wpmm.nonce,
+            to_email:        toEmail,
+            subject:         subject,
+            session_id:      resolvedSession,
+            admin_id:        performingAdminId,
+            manual_entries:  manualEntries
         }, function (res) {
             $btn.prop('disabled', false)
                 .html('<span class="dashicons dashicons-email"></span> Send Report Email');
@@ -1103,6 +1108,67 @@ jQuery(function ($) {
                 $msg.html('<span style="color:#dc2626;">Request failed.</span>');
             });
         });
+    })();
+
+
+    // =========================================================================
+    // MANUAL UPDATES REPEATER (Email Reports page)
+    // =========================================================================
+    (function () {
+        var $container = $('#wpmm-manual-rows');
+        var $template  = $('#wpmm-manual-row-template');
+        if (!$container.length || !$template.length) return;
+
+        function addRow(name, oldVer, newVer) {
+            // Clone the template content
+            var clone = document.importNode($template[0].content, true);
+            var $row  = $(clone).find('.wpmm-manual-row').length
+                ? $(clone)
+                : $(clone.firstElementChild || clone);
+
+            // If name supplied, pre-select it
+            if (name) {
+                $row.find('.wpmm-manual-select').val(name);
+            }
+            if (oldVer) { $row.find('.wpmm-manual-old-version').val(oldVer); }
+            if (newVer) { $row.find('.wpmm-manual-new-version').val(newVer); }
+
+            // Auto-fill old version when plugin selected
+            $row.find('.wpmm-manual-select').on('change', function () {
+                var $opt = $(this).find('option:selected');
+                var ver  = $opt.data('version') || '';
+                $(this).closest('.wpmm-manual-row').find('.wpmm-manual-old-version').val(ver);
+            });
+
+            $container.append($row);
+        }
+
+        // Add initial empty row
+        addRow();
+
+        // Add row button
+        $(document).on('click', '#wpmm-add-manual-row', function () {
+            addRow();
+        });
+
+        // Remove row button
+        $(document).on('click', '.wpmm-manual-remove', function () {
+            $(this).closest('.wpmm-manual-row').remove();
+        });
+
+        // Expose a function to collect manual entries for the send handler
+        window.wpmm_getManualEntries = function () {
+            var entries = [];
+            $container.find('.wpmm-manual-row').each(function () {
+                var name    = $(this).find('.wpmm-manual-select').val();
+                var oldVer  = $(this).find('.wpmm-manual-old-version').val().trim();
+                var newVer  = $(this).find('.wpmm-manual-new-version').val().trim();
+                if (name) {
+                    entries.push({ name: name, old_version: oldVer, new_version: newVer });
+                }
+            });
+            return entries;
+        };
     })();
 
 

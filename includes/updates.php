@@ -177,12 +177,39 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
                 $new_version = $ver_now;
                 $message     = 'Updated to ' . $new_version . ' (already applied earlier in this session).';
             } elseif ( $pkg_url ) {
-                // Transient gone but we have a direct package URL from the scan.
-                // Use Plugin_Upgrader with explicit package to bypass the transient.
+                // Transient entry is gone but we have the package URL from the scan.
+                // IMPORTANT: never use install() on an already-active plugin — it calls
+                // deactivate_plugins() internally as part of a fresh install flow, which
+                // disables the plugin after the update completes.
+                // Instead, inject a minimal transient entry so that upgrade() can find
+                // the package URL. upgrade() preserves the plugin's active/inactive state.
+                $t = get_site_transient( 'update_plugins' );
+                if ( ! $t ) {
+                    $t = new stdClass();
+                }
+                if ( ! isset( $t->response ) || ! is_array( $t->response ) ) {
+                    $t->response = [];
+                }
+                $injected_entry = new stdClass();
+                $injected_entry->id          = $slug;
+                $injected_entry->slug        = dirname( $slug );
+                $injected_entry->plugin      = $slug;
+                $injected_entry->new_version = '';
+                $injected_entry->package     = $pkg_url;
+                $t->response[ $slug ]        = $injected_entry;
+                set_site_transient( 'update_plugins', $t );
+
                 $upgrader = new Plugin_Upgrader( $skin );
-                $result   = $upgrader->install( $pkg_url, [ 'overwrite_package' => true ] );
+                $result   = $upgrader->upgrade( $slug );
                 list( $status, $new_version, $error_code, $message ) =
                     wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version );
+
+                // Clean up the injected entry regardless of outcome.
+                $t2 = get_site_transient( 'update_plugins' );
+                if ( $t2 && isset( $t2->response[ $slug ] ) ) {
+                    unset( $t2->response[ $slug ] );
+                    set_site_transient( 'update_plugins', $t2 );
+                }
             } else {
                 // No transient entry, no package URL (premium/licensed plugin).
                 $error_code = 'no_package';
@@ -233,10 +260,32 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
                 $new_version = $ver_now;
                 $message     = 'Updated to ' . $new_version . ' (already applied earlier in this session).';
             } elseif ( $pkg_url ) {
+                // Same as the plugin path: inject into transient so upgrade()
+                // is used instead of install(), preserving active theme state.
+                $t = get_site_transient( 'update_themes' );
+                if ( ! $t ) { $t = new stdClass(); }
+                if ( ! isset( $t->response ) || ! is_array( $t->response ) ) {
+                    $t->response = [];
+                }
+                $t->response[ $slug ] = [
+                    'theme'       => $slug,
+                    'new_version' => '',
+                    'url'         => '',
+                    'package'     => $pkg_url,
+                ];
+                set_site_transient( 'update_themes', $t );
+
                 $upgrader = new Theme_Upgrader( $skin );
-                $result   = $upgrader->install( $pkg_url, [ 'overwrite_package' => true ] );
+                $result   = $upgrader->upgrade( $slug );
                 list( $status, $new_version, $error_code, $message ) =
                     wpmm_interpret_theme_result( $result, $skin, $slug, $old_version );
+
+                // Clean up injected entry.
+                $t2 = get_site_transient( 'update_themes' );
+                if ( $t2 && isset( $t2->response[ $slug ] ) ) {
+                    unset( $t2->response[ $slug ] );
+                    set_site_transient( 'update_themes', $t2 );
+                }
             } else {
                 $error_code = 'no_package';
                 $message    = wpmm_explain_error( $error_code )['detail'];

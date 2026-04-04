@@ -1106,6 +1106,75 @@ function wpmm_render_email() {
                 <div id="wpmm-email-send-result"></div>
             </div>
 
+            <!-- Additional Manual Updates -->
+            <div class="wpmm-card" id="wpmm-manual-updates-card">
+                <h2 class="wpmm-card-title">
+                    <span class="dashicons dashicons-plus-alt"></span> Additional Manual Updates
+                </h2>
+                <p class="wpmm-card-desc" style="margin-bottom:16px;">
+                    Plugins or themes updated manually outside the control of Site Maintenance Manager
+                    due to functional licensing issues that prevent this plugin from accessing the
+                    specific panels where these plugins are located in the plugin or theme admin.
+                    These entries will be included in the next email report sent above.
+                </p>
+
+                <div id="wpmm-manual-rows">
+                    <!-- Repeater rows injected by JS -->
+                </div>
+
+                <div style="margin-top:12px;">
+                    <button type="button" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm" id="wpmm-add-manual-row">
+                        <span class="dashicons dashicons-plus-alt"></span> Add Manual Update
+                    </button>
+                </div>
+
+                <!-- Hidden template row — cloned by JS -->
+                <template id="wpmm-manual-row-template">
+                    <div class="wpmm-manual-row">
+                        <select class="wpmm-input wpmm-manual-select" data-field="name">
+                            <option value="">— Select plugin or theme —</option>
+                            <?php
+                            if ( ! function_exists( 'get_plugins' ) ) {
+                                require_once ABSPATH . 'wp-admin/includes/plugin.php';
+                            }
+                            $all_installed = get_plugins();
+                            foreach ( $all_installed as $file => $data ) :
+                            ?>
+                                <option value="<?php echo esc_attr( $data['Name'] ); ?>"
+                                        data-version="<?php echo esc_attr( $data['Version'] ); ?>">
+                                    <?php echo esc_html( $data['Name'] ); ?>
+                                </option>
+                            <?php endforeach; ?>
+                            <?php
+                            $themes = wp_get_themes();
+                            foreach ( $themes as $slug => $theme ) :
+                            ?>
+                                <option value="<?php echo esc_attr( $theme->get('Name') ); ?>"
+                                        data-version="<?php echo esc_attr( $theme->get('Version') ); ?>">
+                                    <?php echo esc_html( $theme->get('Name') ); ?> (Theme)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="wpmm-manual-versions">
+                            <div>
+                                <label class="wpmm-manual-label">Previous Version</label>
+                                <input type="text" class="wpmm-input wpmm-manual-old-version" data-field="old_version"
+                                       placeholder="e.g. 6.7.1" style="max-width:120px;">
+                            </div>
+                            <div>
+                                <label class="wpmm-manual-label">Updated To</label>
+                                <input type="text" class="wpmm-input wpmm-manual-new-version" data-field="new_version"
+                                       placeholder="e.g. 6.8.0" style="max-width:120px;">
+                            </div>
+                        </div>
+                        <button type="button" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm wpmm-manual-remove"
+                                title="Remove this entry">
+                            <span class="dashicons dashicons-trash"></span>
+                        </button>
+                    </div>
+                </template>
+            </div>
+
             <!-- Sent email history -->
             <div class="wpmm-card">
                 <h2 class="wpmm-card-title">
