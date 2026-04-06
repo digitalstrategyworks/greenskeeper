@@ -493,6 +493,8 @@ jQuery(function ($) {
             ? JSON.stringify(window.wpmm_getManualEntries())
             : '[]';
 
+        var updateNote = $('#wpmm-update-notes').val() || '';
+
         $.post(wpmm.ajax_url, {
             action:          'wpmm_send_email',
             nonce:           wpmm.nonce,
@@ -500,7 +502,8 @@ jQuery(function ($) {
             subject:         subject,
             session_id:      resolvedSession,
             admin_id:        performingAdminId,
-            manual_entries:  manualEntries
+            manual_entries:  manualEntries,
+            update_note:     updateNote
         }, function (res) {
             $btn.prop('disabled', false)
                 .html('<span class="dashicons dashicons-email"></span> Send Report Email');

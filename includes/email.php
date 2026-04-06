@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * @param array $log_entries  Row objects from wpmm_update_log.
  * @param int   $admin_id     Optional override for the performing administrator.
  */
-function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [] ) {
+function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [], $update_note = '' ) {
 
     $site_name = get_bloginfo( 'name' );
     $site_url  = get_bloginfo( 'url' );
@@ -221,6 +221,20 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
     // ── Footer ────────────────────────────────────────────────────────────────
     $sender = $company ?: 'Site Maintenance Manager';
 
+    // ── Update note block ─────────────────────────────────────────────────────
+    $update_note_block = '';
+    if ( ! empty( $update_note ) ) {
+        $note_lines = nl2br( esc_html( $update_note ) );
+        $update_note_block = '
+    <!-- NOTE -->
+    <div style="padding:24px 36px 0;">
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:18px 22px;">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.06em;">Note from your administrator</p>
+        <p style="margin:0;font-size:14px;color:#78350f;line-height:1.7;">' . $note_lines . '</p>
+      </div>
+    </div>';
+    }
+
     // ── Assemble ─────────────────────────────────────────────────────────────
     return '<!DOCTYPE html>
 <html lang="en">
@@ -246,6 +260,8 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
       <p style="color:#6b7280;font-size:13px;margin:0 0 4px;">The following updates were performed on your site.</p>
       ' . $sections . '
     </div>
+
+    ' . ( $update_note_block ) . '
 
     <!-- FOOTER -->
     <div style="background:#f8fafc;padding:18px 36px;border-top:1px solid #e5e7eb;text-align:center;font-size:12px;color:#9ca3af;">

@@ -1106,6 +1106,28 @@ function wpmm_render_email() {
                 <div id="wpmm-email-send-result"></div>
             </div>
 
+            <!-- Update Notes -->
+            <div class="wpmm-card">
+                <h2 class="wpmm-card-title">
+                    <span class="dashicons dashicons-edit"></span> Update Notes
+                </h2>
+                <p class="wpmm-card-desc">
+                    Add a personal note to append to the bottom of this report email.
+                    Use this to communicate anything additional to your client &mdash;
+                    for example, notes about a manual update, a licensing issue, or any
+                    other context you would like to include alongside the report.
+                </p>
+                <div class="wpmm-form-row">
+                    <label for="wpmm-update-notes">Note to Recipient <span style="font-weight:400;color:var(--wpmm-gray);">(optional)</span></label>
+                    <textarea id="wpmm-update-notes"
+                              class="wpmm-input"
+                              rows="5"
+                              placeholder="e.g. Please note that Avada and its companion plugins were updated manually this week. These updates require license authentication through the Avada dashboard and cannot be applied automatically by Site Maintenance Manager&hellip;"
+                              style="resize:vertical;line-height:1.6;"></textarea>
+                    <p class="wpmm-hint">Plain text only. This note will appear at the bottom of the email above the footer.</p>
+                </div>
+            </div>
+
             <!-- Additional Manual Updates -->
             <div class="wpmm-card" id="wpmm-manual-updates-card">
                 <h2 class="wpmm-card-title">

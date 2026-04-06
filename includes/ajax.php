@@ -88,6 +88,9 @@ function wpmm_ajax_send_email() {
         restore_current_blog();
     }
 
+    // Update note and manual updates added on the Email Reports page.
+    $update_note = sanitize_textarea_field( wp_unslash( $_POST['update_note'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
     // Manual updates added on the Email Reports page.
     $manual_raw     = isset( $_POST['manual_entries'] ) ? wp_unslash( $_POST['manual_entries'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
     $manual_entries = [];
@@ -104,7 +107,7 @@ function wpmm_ajax_send_email() {
         }
     }
 
-    $body   = wpmm_build_email_body( $log_entries, $admin_id, $manual_entries );
+    $body   = wpmm_build_email_body( $log_entries, $admin_id, $manual_entries, $update_note );
     $result = wpmm_send_email( $to, $subject, $body, $admin_id );
 
     if ( $result['success'] ) {
