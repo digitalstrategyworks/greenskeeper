@@ -1,13 +1,13 @@
 # Site Maintenance Manager
 
-**Version:** 1.5.9.1  
+**Version:** 1.6.0  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Requires WordPress:** 5.8+  
 **Requires PHP:** 8.0+  
-**Tested up to:** WordPress 6.7
+**Tested up to:** WordPress 6.9
 
-A professional WordPress maintenance plugin for developers and agencies. Manage core, plugin, and theme updates, send branded HTML email reports to clients, and configure reliable SMTP email delivery — all from a single, purpose-built admin dashboard.
+A professional WordPress maintenance plugin for developers and agencies. Manage core, plugin, and theme updates, filter comment spam with layered local and Akismet cloud filtering, send branded HTML email reports to clients, and configure reliable SMTP email delivery — all from a single, purpose-built admin dashboard.
 
 ---
 
@@ -22,7 +22,8 @@ A professional WordPress maintenance plugin for developers and agencies. Manage 
    - [Update Log](#update-log)
    - [Email Reports](#email-reports)
    - [Settings](#settings)
-5. [SMTP Setup Guides](#smtp-setup-guides)
+5. [Spam Filter & Comments](#spam-filter--comments)
+6. [SMTP Setup Guides](#smtp-setup-guides)
    - [WordPress Default](#wordpress-default)
    - [Manual SMTP](#manual-smtp)
    - [SendGrid](#sendgrid)
@@ -32,10 +33,10 @@ A professional WordPress maintenance plugin for developers and agencies. Manage 
    - [SMTP.com](#smtpcom)
    - [Gmail / Google Workspace](#gmail--google-workspace)
    - [Microsoft / Outlook / Office 365](#microsoft--outlook--office-365)
-6. [Database Schema](#database-schema)
-7. [Multisite / Network Support](#multisite--network-support)
-8. [Frequently Asked Questions](#frequently-asked-questions)
-9. [Changelog](#changelog)
+7. [Database Schema](#database-schema)
+8. [Multisite / Network Support](#multisite--network-support)
+9. [Frequently Asked Questions](#frequently-asked-questions)
+10. [Changelog](#changelog)
 
 ---
 
@@ -43,9 +44,10 @@ A professional WordPress maintenance plugin for developers and agencies. Manage 
 
 Site Maintenance Manager replaces the ad hoc workflow of tab-switching between the WordPress Updates screen, a spreadsheet, and an email client. It gives you one panel to:
 
-- **Run updates** for WordPress Core, all plugins, and all themes — in separate, clearly labelled sections with per-item checkboxes, inline success/failure feedback, and plain-English error explanations
+- **Run updates** for WordPress Core, all plugins, and all themes — in separate, clearly labelled sections with per-item checkboxes, a real-time progress bar, and plain-English error explanations
 - **Log every result** automatically to a searchable, paginated history
-- **Send a branded HTML report** to the client with one click, built automatically from that session's log entries
+- **Send a branded HTML report** to the client with one click, built automatically from that session's log entries, with optional Update Notes and Additional Manual Updates sections
+- **Filter comment spam** using layered local rules and optional Akismet cloud filtering, with a one-toggle option to disable comments entirely
 - **Configure reliable email delivery** via any of nine supported SMTP providers, without needing a separate plugin
 
 ---
@@ -108,6 +110,30 @@ Site Maintenance Manager replaces the ad hoc workflow of tab-switching between t
 - From Name and From Email fields
 - Send Test Email with real-time pass/fail reporting
 
+### Settings — Spam Filter & Comments
+- **Master spam filter toggle** — enable or disable all spam filtering with one switch
+- **Disable Comments** — remove comment support from all post types, close all existing comments, hide the Comments admin menu, and remove discussion meta boxes from the editor; one toggle, site-wide
+- **Local filtering** (always active when spam filter is on):
+  - Honeypot hidden field — catches bots that fill every visible field
+  - Minimum submission time — rejects comments submitted faster than a human can type
+  - Maximum links per comment — configurable threshold, default 3
+  - Keyword blocklist — checked against comment content, author name, and URL
+  - IP blocklist — block specific IP addresses before any other check
+  - Duplicate comment detection — blocks the same comment from the same IP within a rolling 1-hour window
+- **Akismet cloud filtering** (optional, Layer 2):
+  - Enter your Akismet API key to enable AI-powered cloud spam detection
+  - Verify & Save button confirms the key against Akismet's API before storing
+  - Automatically skipped when the standalone Akismet plugin is detected
+  - Fails open on API errors — legitimate comments are never lost due to an outage
+  - Revoke Key button removes the key and disables cloud filtering immediately
+- **Akismet licensing:** free for personal non-commercial sites only; commercial and client sites require a paid plan at [akismet.com/plans](https://akismet.com/plans/)
+
+### Settings — Remote API Access
+- Generate a secret API key to allow a remote hub site to manage this spoke site
+- REST API endpoints under `smm/v1` namespace: status, updates, run update, log, send report, rotate key
+- Copy key to clipboard, rotate (invalidates previous key), or revoke entirely
+- Full endpoint reference table shown inline when a key is active
+
 ### Avada Theme Support
 - Detects when the Avada theme is installed and shows a contextual update-order notice
 - Lists any pending Avada Core / Avada Builder updates by name with new version numbers
@@ -151,6 +177,7 @@ After activation:
 4. Select the default administrator who performs updates
 5. Configure your SMTP provider (see [SMTP Setup Guides](#smtp-setup-guides))
 6. Use **Send Test Email** to verify delivery
+7. Optionally enable spam filtering and configure local rules or add an Akismet API key
 
 ---
 
@@ -245,6 +272,41 @@ Settings has four cards. Each can be configured independently.
 - A table of all WordPress Administrators. Click the radio button next to an administrator and click **Save Default Administrator** to set the default performing admin. This name and email appear in email reports and in the SMTP From: header.
 
 **SMTP & Email Delivery** — see [SMTP Setup Guides](#smtp-setup-guides) below.
+
+---
+
+## Spam Filter & Comments
+
+### Enabling Spam Filtering
+
+1. Go to **Site Maintenance → Settings** and scroll to the **Spam Filter & Comments** card.
+2. Toggle **Spam Filter** on. Local filtering activates immediately — no further configuration required.
+3. Optionally configure the local filter thresholds: minimum submission time, maximum links, keyword blocklist, IP blocklist.
+4. Click **Save Spam Settings**.
+
+### Adding Akismet Cloud Filtering
+
+1. Get an API key from [akismet.com](https://akismet.com). Personal non-commercial sites can use the free plan; commercial and client sites require a paid plan.
+2. In the **Akismet Cloud Filtering** section, paste your key into the API Key field.
+3. Click **Verify & Save Key**. The plugin checks the key against Akismet's servers before saving.
+4. A green "Connected ✓" badge appears when the key is active.
+5. To remove the key later, click **Remove Key**.
+
+> **Note:** If the standalone Akismet plugin is already active on this site, the Settings page shows a notice and the plugin skips its own Akismet API call automatically. Only local filtering runs alongside the standalone plugin.
+
+### Disabling Comments Site-Wide
+
+1. In the **Spam Filter & Comments** card, toggle **Disable Comments** on.
+2. Click **Save Spam Settings**.
+3. Comment forms are immediately removed from all post types, all existing comments are closed, the Comments admin menu is hidden, and discussion meta boxes are removed from the editor.
+
+> **Note:** Disabling comments does not delete existing comment data — it only prevents new comments and hides the comment UI. Re-enabling the toggle restores full comment functionality.
+
+### Akismet Commercial Licensing Notice
+
+Akismet's free plan is restricted to personal, non-commercial websites with no advertising, no products for sale, and no services offered. Every commercial website — including client sites managed on retainer by a web agency — is required to use a paid Akismet plan.
+
+Site Maintenance Manager provides the Akismet API integration. Compliance with Akismet's terms of service is the responsibility of the site owner. Visit [akismet.com/plans](https://akismet.com/plans/) to review plan options.
 
 ---
 
@@ -452,6 +514,28 @@ All plugin settings (company name, logo URL, client email, default admin ID, SMT
 ---
 
 ## Frequently Asked Questions
+
+### Does the spam filter work without an Akismet key?
+
+Yes. The local filtering layer runs entirely on your server with no external API calls. It catches the majority of automated bot spam using a honeypot field, submission time check, link count limit, keyword blocklist, IP blocklist, and duplicate detection. Adding an Akismet key activates a second layer of AI-powered cloud filtering for more comprehensive coverage.
+
+### Do I need a paid Akismet account?
+
+Akismet's free plan is for personal, non-commercial sites only. Any commercial website — including client sites managed by a web agency — requires a paid Akismet plan. Visit [akismet.com/plans](https://akismet.com/plans/) to choose the right plan. Site Maintenance Manager provides the integration; licensing is your responsibility.
+
+### Will the spam filter conflict with the standalone Akismet plugin?
+
+No. The plugin detects when the standalone Akismet plugin is active and skips its own Akismet API call automatically. Only local filtering runs alongside the standalone plugin, preventing double-filtering.
+
+### What happens if Akismet is unreachable?
+
+The plugin fails open — the comment is allowed through rather than blocked. This prevents legitimate comments from being lost during a temporary API outage. Local filters still run normally.
+
+### Can I disable comments completely?
+
+Yes. The **Disable Comments** toggle in Settings removes comment support from every post type, closes all existing comments, hides the Comments admin menu, and removes discussion meta boxes from the editor. Re-enabling the toggle restores full comment functionality. Existing comment data is preserved in both states.
+
+
 
 **Do I need a separate SMTP plugin?**
 No. Site Maintenance Manager includes built-in SMTP configuration. If you already use WP Mail SMTP, FluentSMTP, or Post SMTP, leave this plugin's SMTP setting on WordPress Default to avoid conflicts.

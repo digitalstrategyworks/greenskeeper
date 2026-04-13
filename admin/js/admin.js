@@ -1264,4 +1264,135 @@ jQuery(function ($) {
     })();
 
 
+    // =========================================================================
+    // SPAM FILTER SETTINGS (Settings page)
+    // =========================================================================
+    (function () {
+        var $card = $('#wpmm-spam-card');
+        if ( !$card.length ) return;
+
+        // Toggle local options opacity when master switch changes
+        $(document).on('change', '#wpmm-spam-filter-enabled', function () {
+            var on = $(this).is(':checked');
+            $('#wpmm-spam-local-options').css({
+                opacity: on ? '1' : '0.5',
+                'pointer-events': on ? '' : 'none'
+            });
+        });
+
+        // Toggle label text for comments disabled
+        $(document).on('change', '#wpmm-comments-disabled', function () {
+            var on = $(this).is(':checked');
+            $(this).closest('.wpmm-settings-group-control')
+                   .find('.wpmm-toggle-label')
+                   .text( on ? 'Comments are disabled site-wide' : 'Comments are enabled' );
+        });
+
+        // Toggle label text for spam filter switch
+        $(document).on('change', '#wpmm-spam-filter-enabled', function () {
+            var on = $(this).is(':checked');
+            $(this).closest('.wpmm-settings-group-control')
+                   .find('.wpmm-toggle-label')
+                   .text( on ? 'Spam filtering is active' : 'Spam filtering is disabled' );
+        });
+
+        // Save spam settings
+        $(document).on('click', '#wpmm-save-spam-btn', function () {
+            var $btn = $(this);
+            var $msg = $('#wpmm-spam-save-msg');
+
+            $btn.prop('disabled', true)
+                .html('<span class="dashicons dashicons-update wpmm-spin"></span> Saving…');
+
+            $.post(wpmm.ajax_url, {
+                action:               'wpmm_save_spam_settings',
+                nonce:                wpmm.nonce,
+                spam_filter_enabled:  $('#wpmm-spam-filter-enabled').is(':checked') ? 1 : '',
+                comments_disabled:    $('#wpmm-comments-disabled').is(':checked')   ? 1 : '',
+                spam_min_time:        $('#wpmm-spam-min-time').val(),
+                spam_max_links:       $('#wpmm-spam-max-links').val(),
+                spam_keywords:        $('#wpmm-spam-keywords').val(),
+                spam_ip_blocklist:    $('#wpmm-spam-ip-blocklist').val()
+            })
+            .done(function (res) {
+                $btn.prop('disabled', false)
+                    .html('<span class="dashicons dashicons-yes"></span> Save Spam Settings');
+                if (res && res.success) {
+                    $msg.html('<span style="color:#16a34a;">&#10003; Settings saved.</span>');
+                } else {
+                    $msg.html('<span style="color:#dc2626;">Failed to save.</span>');
+                }
+                setTimeout(function () { $msg.html(''); }, 3000);
+            })
+            .fail(function () {
+                $btn.prop('disabled', false)
+                    .html('<span class="dashicons dashicons-yes"></span> Save Spam Settings');
+                $msg.html('<span style="color:#dc2626;">Request failed.</span>');
+            });
+        });
+
+        // Verify Akismet key
+        $(document).on('click', '#wpmm-verify-akismet-btn', function () {
+            var $btn = $(this);
+            var $msg = $('#wpmm-akismet-msg');
+            var key  = $('#wpmm-akismet-key').val().trim();
+
+            if (!key) {
+                $msg.html('<span style="color:#dc2626;">Please enter an API key first.</span>');
+                return;
+            }
+
+            $btn.prop('disabled', true)
+                .html('<span class="dashicons dashicons-update wpmm-spin"></span> Verifying…');
+
+            $.post(wpmm.ajax_url, {
+                action:      'wpmm_verify_akismet_key',
+                nonce:       wpmm.nonce,
+                akismet_key: key
+            })
+            .done(function (res) {
+                $btn.prop('disabled', false)
+                    .html('<span class="dashicons dashicons-yes-alt"></span> Re-verify Key');
+                if (res && res.success) {
+                    $msg.html('<span style="color:#16a34a;">&#10003; ' + res.data.message + '</span>');
+                } else {
+                    $msg.html('<span style="color:#dc2626;">&#10008; ' + (res.data || 'Verification failed.') + '</span>');
+                }
+            })
+            .fail(function () {
+                $btn.prop('disabled', false)
+                    .html('<span class="dashicons dashicons-yes-alt"></span> Re-verify Key');
+                $msg.html('<span style="color:#dc2626;">Request failed. Check your connection.</span>');
+            });
+        });
+
+        // Revoke Akismet key
+        $(document).on('click', '#wpmm-revoke-akismet-btn', function () {
+            if (!window.confirm('Remove the Akismet API key? Cloud filtering will be disabled.')) return;
+            var $btn = $(this);
+            var $msg = $('#wpmm-akismet-msg');
+            $btn.prop('disabled', true);
+
+            $.post(wpmm.ajax_url, {
+                action: 'wpmm_revoke_akismet_key',
+                nonce:  wpmm.nonce
+            })
+            .done(function (res) {
+                if (res && res.success) {
+                    $msg.html('<span style="color:#16a34a;">&#10003; Key removed. Reloading…</span>');
+                    setTimeout(function () { location.reload(); }, 1000);
+                } else {
+                    $btn.prop('disabled', false);
+                    $msg.html('<span style="color:#dc2626;">Failed to remove key.</span>');
+                }
+            })
+            .fail(function () {
+                $btn.prop('disabled', false);
+                $msg.html('<span style="color:#dc2626;">Request failed.</span>');
+            });
+        });
+
+    })();
+
+
 }); // end jQuery ready

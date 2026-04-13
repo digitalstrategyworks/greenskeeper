@@ -77,6 +77,16 @@ function wpmm_render_settings() {
     // REST API key
     $api_key         = $s['api_key'] ?? '';
 
+    // Spam filter settings
+    $spam_enabled      = ! empty( $s['spam_filter_enabled'] );
+    $comments_disabled = ! empty( $s['comments_disabled'] );
+    $spam_min_time     = absint( $s['spam_min_time']  ?? 5 );
+    $spam_max_links    = absint( $s['spam_max_links'] ?? 3 );
+    $spam_keywords     = $s['spam_keywords']     ?? '';
+    $spam_ip_blocklist = $s['spam_ip_blocklist'] ?? '';
+    $akismet_key       = $s['akismet_key']       ?? '';
+    $akismet_active    = defined( 'AKISMET_VERSION' );
+
     // SMTP settings
     $smtp_mailer     = $s['smtp_mailer']     ?? 'default';
     $smtp_host       = $s['smtp_host']       ?? '';
@@ -621,6 +631,166 @@ function wpmm_render_settings() {
                 </div>
 
             </div><!-- #wpmm-smtp-card -->
+
+
+            <!-- ── Spam Filter & Comments ──────────────────────────── -->
+            <div class="wpmm-card" id="wpmm-spam-card">
+                <h2 class="wpmm-card-title">
+                    <span class="dashicons dashicons-shield"></span> Spam Filter &amp; Comments
+                </h2>
+                <p class="wpmm-card-desc">
+                    Protect this site from comment spam using local filtering rules and optional
+                    Akismet cloud filtering. You can also disable comments site-wide.
+                </p>
+
+                <!-- Disable comments toggle -->
+                <div class="wpmm-settings-group">
+                    <div class="wpmm-settings-group-label">
+                        <strong>Disable Comments</strong>
+                        <span>Remove comment support from all post types and hide the Comments menu.</span>
+                    </div>
+                    <div class="wpmm-settings-group-control">
+                        <label class="wpmm-toggle">
+                            <input type="checkbox" id="wpmm-comments-disabled"
+                                <?php checked( $comments_disabled ); ?>>
+                            <span class="wpmm-toggle-slider"></span>
+                        </label>
+                        <span class="wpmm-toggle-label">
+                            <?php echo $comments_disabled ? 'Comments are disabled site-wide' : 'Comments are enabled'; ?>
+                        </span>
+                        <p class="wpmm-hint">
+                            When enabled, comments are closed on all posts, the Comments admin menu
+                            is hidden, and discussion meta boxes are removed from the editor.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Spam filter master switch -->
+                <div class="wpmm-settings-group">
+                    <div class="wpmm-settings-group-label">
+                        <strong>Spam Filter</strong>
+                        <span>Enable layered comment spam filtering for this site.</span>
+                    </div>
+                    <div class="wpmm-settings-group-control">
+                        <label class="wpmm-toggle">
+                            <input type="checkbox" id="wpmm-spam-filter-enabled"
+                                <?php checked( $spam_enabled ); ?>>
+                            <span class="wpmm-toggle-slider"></span>
+                        </label>
+                        <span class="wpmm-toggle-label">
+                            <?php echo $spam_enabled ? 'Spam filtering is active' : 'Spam filtering is disabled'; ?>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Local filtering options -->
+                <div id="wpmm-spam-local-options" <?php echo $spam_enabled ? '' : 'style="opacity:.5;pointer-events:none;"'; ?>>
+                    <div class="wpmm-settings-subhead">Local Filtering
+                        <span class="wpmm-badge wpmm-badge-success" style="margin-left:8px;font-size:11px;">Always Active</span>
+                    </div>
+
+                    <div class="wpmm-form-row" style="margin-bottom:12px;">
+                        <label>Minimum submission time (seconds)</label>
+                        <input type="number" id="wpmm-spam-min-time"
+                               class="wpmm-input" style="max-width:100px;"
+                               value="<?php echo absint( $spam_min_time ); ?>" min="0" max="60">
+                        <p class="wpmm-hint">Comments submitted faster than this are rejected as bots. Default: 5.</p>
+                    </div>
+
+                    <div class="wpmm-form-row" style="margin-bottom:12px;">
+                        <label>Maximum links per comment</label>
+                        <input type="number" id="wpmm-spam-max-links"
+                               class="wpmm-input" style="max-width:100px;"
+                               value="<?php echo absint( $spam_max_links ); ?>" min="0" max="50">
+                        <p class="wpmm-hint">Comments with more links than this are rejected. Default: 3. Set to 0 to disable.</p>
+                    </div>
+
+                    <div class="wpmm-form-row" style="margin-bottom:12px;">
+                        <label for="wpmm-spam-keywords">Blocked Keywords</label>
+                        <textarea id="wpmm-spam-keywords" class="wpmm-input"
+                                  rows="4" style="resize:vertical;"
+                                  placeholder="One keyword or phrase per line&#10;e.g. casino&#10;buy cheap&#10;click here"><?php echo esc_textarea( $spam_keywords ); ?></textarea>
+                        <p class="wpmm-hint">Comments containing any of these words (in content, author name, or URL) are blocked.</p>
+                    </div>
+
+                    <div class="wpmm-form-row" style="margin-bottom:0;">
+                        <label for="wpmm-spam-ip-blocklist">Blocked IP Addresses</label>
+                        <textarea id="wpmm-spam-ip-blocklist" class="wpmm-input"
+                                  rows="3" style="resize:vertical;"
+                                  placeholder="One IP address per line&#10;e.g. 192.168.1.1"><?php echo esc_textarea( $spam_ip_blocklist ); ?></textarea>
+                        <p class="wpmm-hint">Comments from these IP addresses are blocked immediately.</p>
+                    </div>
+                </div>
+
+                <!-- Akismet integration -->
+                <div id="wpmm-akismet-section" style="margin-top:24px;padding-top:20px;border-top:1px solid var(--wpmm-border);">
+                    <div class="wpmm-settings-subhead">Akismet Cloud Filtering
+                        <?php if ( $akismet_active ) : ?>
+                            <span class="wpmm-badge" style="margin-left:8px;font-size:11px;background:#e0f2fe;color:#0369a1;">
+                                Standalone Akismet plugin detected
+                            </span>
+                        <?php elseif ( $akismet_key ) : ?>
+                            <span class="wpmm-badge wpmm-badge-success" style="margin-left:8px;font-size:11px;">
+                                &#10003; Connected
+                            </span>
+                        <?php else : ?>
+                            <span class="wpmm-badge" style="margin-left:8px;font-size:11px;background:#f1f5f9;color:#64748b;">
+                                Not configured
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if ( $akismet_active ) : ?>
+                        <p style="font-size:13px;color:var(--wpmm-gray);margin:8px 0 0;">
+                            The standalone Akismet plugin is active and handling cloud filtering.
+                            Site Maintenance Manager will skip its own Akismet check to avoid
+                            double-filtering. Local filtering above remains active.
+                        </p>
+                    <?php else : ?>
+                        <p class="wpmm-hint" style="margin:8px 0 12px;">
+                            Enter your Akismet API key to enable AI-powered cloud spam detection.
+                            When active, comments that pass local filters are also checked against
+                            Akismet&rsquo;s global spam database.
+                            <a href="https://akismet.com/plans/" target="_blank" rel="noopener">
+                                Get a free key at akismet.com &rarr;
+                            </a>
+                        </p>
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <input type="text" id="wpmm-akismet-key"
+                                   class="wpmm-input" style="max-width:340px;"
+                                   value="<?php echo esc_attr( $akismet_key ); ?>"
+                                   placeholder="e.g. a1b2c3d4e5f6">
+                            <button type="button" id="wpmm-verify-akismet-btn"
+                                    class="wpmm-btn wpmm-btn-primary wpmm-btn-sm">
+                                <span class="dashicons dashicons-yes-alt"></span>
+                                <?php echo $akismet_key ? 'Re-verify Key' : 'Verify &amp; Save Key'; ?>
+                            </button>
+                            <?php if ( $akismet_key ) : ?>
+                                <button type="button" id="wpmm-revoke-akismet-btn"
+                                        class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm"
+                                        style="color:var(--wpmm-red);border-color:#fca5a5;">
+                                    <span class="dashicons dashicons-trash"></span> Remove Key
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                        <p id="wpmm-akismet-msg" class="wpmm-save-feedback" style="margin-top:8px;"></p>
+                        <p class="wpmm-hint" style="margin-top:8px;">
+                            <strong>Note:</strong> Akismet&rsquo;s free plan is for personal,
+                            non-commercial sites only. Commercial and client sites require a
+                            paid Akismet plan.
+                        </p>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Save button -->
+                <div class="wpmm-toolbar" style="margin-top:20px;">
+                    <button type="button" class="wpmm-btn wpmm-btn-primary" id="wpmm-save-spam-btn">
+                        <span class="dashicons dashicons-yes"></span> Save Spam Settings
+                    </button>
+                    <span id="wpmm-spam-save-msg" class="wpmm-save-feedback"></span>
+                </div>
+
+            </div><!-- #wpmm-spam-card -->
 
             <?php wpmm_tip_card(); ?>
         </div>

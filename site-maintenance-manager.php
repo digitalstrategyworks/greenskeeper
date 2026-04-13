@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Site Maintenance Manager
  * Description: Manage WordPress core, plugin, and theme updates with email reporting. Supports single-site and Multisite (network) installs.
- * Version:     1.5.9.1
+ * Version:     1.6.0
  * Author:      Tony Zeoli
  * Author URI:  https://digitalstrategyworks.com
  * License:     GPL-2.0+
@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'WPMM_VERSION',    '1.5.9.1' );
+define( 'WPMM_VERSION',    '1.6.0' );
 define( 'WPMM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPMM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -26,6 +26,7 @@ require_once WPMM_PLUGIN_DIR . 'includes/ajax.php';
 require_once WPMM_PLUGIN_DIR . 'admin/admin.php';
 require_once WPMM_PLUGIN_DIR . 'admin/settings.php';
 require_once WPMM_PLUGIN_DIR . 'includes/rest-api.php';
+require_once WPMM_PLUGIN_DIR . 'includes/spam-filter.php';
 
 // -- Activation ----------------------------------------------------------------
 register_activation_hook( __FILE__, 'wpmm_activate' );

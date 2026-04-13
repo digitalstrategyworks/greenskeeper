@@ -15,7 +15,9 @@ function wpmm_get_settings() {
         'client_email'     => get_option( 'wpmm_client_email', '' ),
         'default_admin_id' => 0,
     ];
-    $saved = get_option( 'wpmm_settings', [] );
+    // Allow other modules (e.g. spam-filter.php) to register their own defaults.
+    $defaults = apply_filters( 'wpmm_settings_defaults', $defaults );
+    $saved    = get_option( 'wpmm_settings', [] );
     return wp_parse_args( $saved, $defaults );
 }
 

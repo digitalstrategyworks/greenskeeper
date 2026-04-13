@@ -6,25 +6,34 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        1.5.9.1
+Stable tag:        1.6.0
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
-Manage WordPress updates, send branded HTML email reports, and configure SMTP email delivery — all from one admin dashboard.
+Manage WordPress updates, filter comment spam, send branded email reports, and configure SMTP delivery — all from one dashboard.
 
 == Description ==
 
-Site Maintenance Manager is a professional WordPress maintenance plugin for developers and agencies. It centralises update management for WordPress Core, plugins, and themes, and pairs it with a polished email reporting workflow.
+Site Maintenance Manager is a professional WordPress maintenance plugin for developers and agencies. It centralises update management for WordPress Core, plugins, and themes, pairs it with a polished email reporting workflow, and adds layered comment spam protection — all from a single purpose-built admin dashboard.
 
-**What it does:**
+**Updates & Reporting:**
 
 * Scans for available WordPress Core, plugin, and theme updates in separate sections
-* Updates items individually or in batch with inline success/failure feedback and plain-English error explanations
+* Updates items individually or in batch with a real-time progress bar and plain-English error explanations
 * Logs every update action automatically — searchable by item name or date range, grouped into sessions
 * Builds a branded HTML maintenance report email from each update session and sends it to your client
+* Report emails support Update Notes (admin note to recipient) and Additional Manual Updates (for licensed plugins updated outside the plugin)
 * Configures reliable SMTP email delivery via nine supported providers — no separate SMTP plugin required
 * Manages agency branding: company logo, company name, and default administrator shown on reports
 * Works on single-site WordPress installs and Multisite networks
+
+**Spam Filter & Comments:**
+
+* Layer 1 — Local filtering (always active): honeypot hidden field, submission time check, link count limit, keyword blocklist, IP blocklist, duplicate comment detection
+* Layer 2 — Akismet cloud filtering (optional): enter your Akismet API key to enable AI-powered spam detection. Automatically skipped when the standalone Akismet plugin is active
+* Disable Comments: remove comment support from all post types and hide the Comments admin menu site-wide
+
+**Important — Akismet licensing:** Akismet is free for personal, non-commercial sites only. Any commercial or client site requires a paid Akismet plan available at [akismet.com/plans](https://akismet.com/plans/). Site Maintenance Manager provides the integration; you are responsible for having a valid Akismet licence appropriate for your site's use.
 
 **Supported SMTP Providers:**
 
@@ -32,7 +41,7 @@ SendGrid, Mailgun, Brevo, SendLayer, SMTP.com, Gmail / Google Workspace, Microso
 
 **Who it is for:**
 
-Web developers, digital agencies, and WordPress administrators who manage client sites and need a reliable, repeatable maintenance workflow with professional client-facing reporting.
+Web developers, digital agencies, and WordPress administrators who manage client sites and need a reliable, repeatable maintenance and security workflow with professional client-facing reporting.
 
 == Installation ==
 
@@ -42,7 +51,7 @@ Web developers, digital agencies, and WordPress administrators who manage client
 2. Upload `site-maintenance-manager.zip` and click **Install Now**.
 3. Click **Activate Plugin**.
 4. Navigate to **Site Maintenance** in the left-hand admin menu.
-5. Open **Settings** and configure your company branding, client email, default administrator, and SMTP delivery.
+5. Open **Settings** and configure your company branding, client email, default administrator, SMTP delivery, and spam filtering.
 
 = Multisite / Network Install =
 
@@ -141,6 +150,51 @@ Two custom database tables per site:
 * `{prefix}_wpmm_email_log` — one row per email send (session_id, to_email, subject, body, status, sent_at)
 
 Plugin settings (branding, SMTP, client email, default admin) are stored in the `wpmm_settings` WordPress option.
+
+
+= Does the spam filter work without an Akismet API key? =
+
+Yes. The local filtering layer (honeypot field, submission time check, link count
+limit, keyword blocklist, IP blocklist, and duplicate detection) runs entirely on
+your server with no external API calls. Local filtering alone catches the majority
+of automated bot spam. Adding an Akismet API key activates a second layer of
+AI-powered cloud filtering for more comprehensive coverage.
+
+= Do I need a paid Akismet account? =
+
+Akismet's free plan is for personal, non-commercial sites only. Any commercial
+website — including client sites managed by an agency — requires a paid Akismet
+plan. Visit [akismet.com/plans](https://akismet.com/plans/) to choose the right
+plan. Site Maintenance Manager provides the Akismet integration; licensing is your
+responsibility.
+
+= Will the spam filter conflict with the standalone Akismet plugin? =
+
+No. Site Maintenance Manager detects when the standalone Akismet plugin is already
+active and skips its own Akismet API call automatically. Only the local filtering
+layer runs in that case, so you never get double-filtering. The Settings page shows
+a notice when the standalone plugin is detected.
+
+= What happens if Akismet is unreachable when a comment is submitted? =
+
+The plugin fails open — the comment is allowed through rather than being blocked.
+This prevents legitimate comments from being lost due to a temporary API outage or
+network issue. Local filters still run normally regardless of Akismet availability.
+
+= Can I disable comments completely across the entire site? =
+
+Yes. The Disable Comments toggle in Settings → Spam Filter & Comments removes
+comment support from every post type, closes all existing comments via WordPress
+filter hooks, hides the Comments admin menu item, redirects direct access to the
+comments admin page, and removes discussion meta boxes from the post and page
+editors. This is a site-wide setting — it applies to all post types including
+custom ones.
+
+= How do I add an IP address to the blocklist after catching a spammer? =
+
+Go to **Settings → Spam Filter & Comments** and add the IP address to the
+Blocked IP Addresses textarea, one per line. Click **Save Spam Settings**. Future
+comments from that IP will be blocked before any other check runs.
 
 = Can I use this plugin alongside WP Mail SMTP or other SMTP plugins? =
 
@@ -301,15 +355,33 @@ The App Password method above works identically for Workspace accounts. Alternat
 == Screenshots ==
 
 1. **Dashboard** — Status summary cards showing last update date, client email, default administrator, and agency branding. Quick-navigation tiles link to all pages.
-2. **Updates** — Three sections (WordPress Core, Plugins, Themes) with checkboxes, version numbers, and the performing administrator dropdown. Inline success/failure feedback after each update.
+2. **Updates** — Three sections (WordPress Core, Plugins, Themes) with checkboxes, version numbers, and performing administrator dropdown. Real-time progress bar with per-item status during batch updates.
 3. **Update Log** — Collapsible session accordion with search autocomplete, date filtering, per-page selector, and Previous/Next pagination.
-4. **Email Reports** — Send form, email template preview, and Sent Email History table with preview modal and resend button.
-5. **Settings** — Company & Branding (logo upload, company name), Client Contact, Site Administrators table with Gravatar and radio selection, SMTP & Email Delivery card with provider tile grid.
-6. **Email Preview Modal** — Full rendered HTML email preview inside the WordPress admin.
-7. **SMTP Configuration** — Provider tile grid with context-sensitive setup instructions and Send Test Email feature.
-8. **Database Diagnostic** — Expandable panel showing table columns, row counts, and Force DB Upgrade button.
+4. **Email Reports** — Send form with subject line builder, Report Week-Ending Date picker, Update Notes textarea, Additional Manual Updates repeater, and Sent Email History table with preview modal and resend.
+5. **Settings — Company, Client & Administrators** — Logo upload, company name, client email, and Site Administrators table with Gravatar and radio selection.
+6. **Settings — Spam Filter & Comments** — Master spam toggle, Disable Comments toggle, local filtering configuration (min time, max links, keyword blocklist, IP blocklist), and Akismet API key field with verify/revoke.
+7. **Settings — SMTP & Email Delivery** — Provider tile grid with context-sensitive setup instructions and Send Test Email feature.
+8. **Email Preview Modal** — Full rendered HTML email preview inside the WordPress admin.
+9. **Database Diagnostic** — Expandable panel showing table columns, row counts, and Force DB Upgrade button.
 
 == Changelog ==
+
+= 1.6.0 =
+* Feature: Spam Filter & Comments card in Settings.
+* Layer 1 — Local filtering (always active when spam filter is on): honeypot
+  hidden field, minimum submission time check, maximum links per comment,
+  configurable keyword blocklist, configurable IP blocklist, duplicate comment
+  detection within a rolling 1-hour window.
+* Layer 2 — Akismet cloud filtering: optional, activated by entering an API key.
+  Skipped automatically when the standalone Akismet plugin is already active.
+  Failed Akismet requests fail open (comment allowed) rather than blocking
+  legitimate comments if the API is unreachable.
+* Disable Comments: toggle to remove comment support from all post types,
+  close all existing comments, hide the Comments admin menu, and remove
+  discussion meta boxes from the post editor.
+* Akismet key verification: Verify & Save button confirms the key is valid
+  against the Akismet API before storing it. Revoke button removes the key.
+* Toggle switches for all boolean settings with live label updates.
 
 = 1.5.9.1 =
 * Changelog updated to include all versions from 1.5.1 through 1.5.9 which
@@ -563,6 +635,9 @@ All errors and warnings reported by the Plugin Check plugin have been resolved:
 * 24-entry error code dictionary with plain-English explanations.
 
 == Upgrade Notice ==
+
+= 1.6.0 =
+Adds layered comment spam filtering with optional Akismet integration, and a Disable Comments toggle. No database changes.
 
 = 1.5.9.1 =
 Changelog-only update. No functional changes.
