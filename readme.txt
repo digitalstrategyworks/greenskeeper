@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        1.7.0
+Stable tag:        1.8.0
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -174,6 +174,41 @@ Comments → Spam queue.
 
 From the Spam Log you can: filter by rule or IP, add an IP to the blocklist
 with one click, delete individual entries, or clear the entire log.
+
+
+= Who can access Site Maintenance Manager? =
+
+By default, any WordPress Administrator can access the plugin. Once you save the
+Manage Plugin Access settings (Settings → Manage Plugin Access), only the
+administrators you have explicitly checked can see or use any part of the plugin.
+Unchecked administrators see no menu item and cannot reach any plugin page.
+
+Your own account is always locked in — you cannot accidentally remove your own
+access from within the plugin.
+
+= Can a client with Administrator access see the plugin? =
+
+Not after you configure the Manage Plugin Access card. Go to
+**Site Maintenance → Settings**, scroll to **Manage Plugin Access**, uncheck the
+client's administrator account, and click **Save Access Settings**. That account
+will no longer see the Site Maintenance menu or any plugin page.
+
+= What if I get locked out of the plugin? =
+
+Lockout cannot happen from within the plugin UI — your own account is always
+kept in the access list automatically. If you are locked out through a direct
+database change, connect to the database and either delete the `wpmm_settings`
+option (which resets to the manage_options fallback) or add your user ID back
+to the `access_user_ids` array in that option.
+
+= Does the plugin support two-factor authentication? =
+
+The plugin does not implement 2FA itself. Instead, it detects whether a 2FA plugin
+is active and shows a notice on every plugin page if none is found, with direct
+links to install WP 2FA or Two Factor. We recommend protecting the administrator
+accounts that have wpmm_access with 2FA via one of these dedicated plugins:
+WP 2FA (by Melapress), Two Factor (official WordPress.org plugin),
+Wordfence Security, or iThemes Security Pro.
 
 = Does the spam filter work without an Akismet API key? =
 
@@ -387,6 +422,24 @@ The App Password method above works identically for Workspace accounts. Alternat
 10. **Database Diagnostic** — Expandable panel showing table columns, row counts, and Force DB Upgrade button.
 
 == Changelog ==
+
+= 1.8.0 =
+* Feature: Manage Plugin Access card in Settings.
+* A new wpmm_access custom WordPress capability controls who can see and
+  use the plugin. Only administrators explicitly granted this capability
+  will see the Site Maintenance menu — it is completely invisible to all
+  other users including client administrators.
+* Manage Plugin Access card in Settings lists every site administrator
+  with a checkbox. The current user is always locked in to prevent
+  accidental self-lockout.
+* Access settings are synced to WordPress user capabilities immediately
+  on save via wpmm_grant_access_to_admins().
+* On fresh activation or if no users have been explicitly granted access,
+  the plugin falls back to manage_options so existing installs are not
+  accidentally locked.
+* Two-factor authentication notice: a dismissible admin notice on all
+  plugin pages recommends installing WP 2FA or Two Factor if no 2FA
+  plugin is detected on the site.
 
 = 1.7.0 =
 * Feature: Spam Log page — sixth page under the Site Maintenance menu.
@@ -673,6 +726,9 @@ All errors and warnings reported by the Plugin Check plugin have been resolved:
 * 24-entry error code dictionary with plain-English explanations.
 
 == Upgrade Notice ==
+
+= 1.8.0 =
+Adds Manage Plugin Access — control which administrators can see the plugin. On first upgrade, all current administrators retain access. Uncheck client accounts in Settings → Manage Plugin Access to hide the plugin from them.
 
 = 1.7.0 =
 Adds Spam Log page with full blocked-attempt history, stats, and IP blocklist management. Creates a new wpmm_spam_log database table on upgrade.

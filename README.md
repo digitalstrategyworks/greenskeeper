@@ -1,6 +1,6 @@
 # Site Maintenance Manager
 
-**Version:** 1.7.0  
+**Version:** 1.8.0  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Requires WordPress:** 5.8+  
@@ -151,6 +151,14 @@ Site Maintenance Manager replaces the ad hoc workflow of tab-switching between t
 - Confirmation prompt when Avada theme is selected for update, reminding about companion plugin order
 - Direct link to Avada's Maintenance → Plugins & Add-Ons dashboard for checking Avada Patches (which are managed outside the standard WordPress update API)
 
+### Manage Plugin Access
+- Restrict the plugin to specific administrator accounts — client admins see nothing
+- `wpmm_access` custom WordPress capability gates every page, menu item, and AJAX handler
+- Checkbox table in Settings lists every site administrator with their avatar, name, email, and username
+- Current user is always locked in — cannot accidentally self-revoke
+- Falls back to `manage_options` on fresh installs so no lockout occurs on upgrade
+- Dismissible 2FA notice on all plugin pages when no 2FA plugin is detected, with direct install links
+
 ### Multisite / Network
 - Works on both single-site and Multisite networks
 - Network-activate to provision all sub-sites simultaneously
@@ -281,6 +289,20 @@ All comment attempts blocked by any filter rule are recorded here — locally-fi
 **Deleting entries:** Check individual rows and click **Delete Selected**, or click **Clear All** to wipe the log. Neither action affects WordPress's Comments screen — it only removes records from the plugin's own spam log table.
 
 **Akismet entries:** Comments caught by Akismet appear in this log with the rule shown as "Akismet". They also continue to appear in **WordPress Admin → Comments → Spam** as they normally would.
+
+---
+
+### Settings — Manage Plugin Access
+
+Go to **Site Maintenance → Settings** and scroll to the **Manage Plugin Access** card.
+
+The table lists every WordPress Administrator on this site. Check the accounts that should have access to Site Maintenance Manager and uncheck any that should not — for example, a client's administrator account.
+
+Click **Save Access Settings**. Changes take effect immediately. Unchecked users will no longer see the Site Maintenance menu item or be able to reach any plugin page.
+
+Your own account always remains checked and cannot be unchecked. If you need to remove your own access, another authorized administrator must do it.
+
+**Recommending 2FA:** A dismissible notice appears on all plugin pages when no 2FA plugin is active on the site. Click the links in the notice to install WP 2FA or Two Factor directly from the WordPress plugin repository.
 
 ---
 
@@ -566,6 +588,22 @@ From the page you can filter by rule or IP, add an IP to the blocklist with one 
 
 In the `{prefix}_wpmm_spam_log` database table, created automatically when the plugin activates or upgrades. Entries are never deleted automatically — use the **Delete Selected** or **Clear All** controls on the Spam Log page to manage storage.
 
+### Who can access Site Maintenance Manager?
+
+By default (on a fresh install), every WordPress Administrator can access the plugin. Once you save the Manage Plugin Access card in Settings, only explicitly checked administrators can see the plugin. All others — including client admins — see no menu item and cannot reach any plugin page.
+
+### Can a client with Administrator access see the plugin?
+
+Not after you configure Manage Plugin Access. Go to **Settings → Manage Plugin Access**, uncheck the client's administrator account, and click **Save Access Settings**. That account will no longer see the Site Maintenance menu.
+
+### What if I get locked out of the plugin?
+
+Lockout from within the plugin UI is impossible — your own account is always kept in the access list. If locked out through a direct database change, delete the `wpmm_settings` option (resets to the `manage_options` fallback) or add your user ID back to the `access_user_ids` array in that option.
+
+### Does the plugin support two-factor authentication?
+
+The plugin doesn't implement 2FA itself — it detects whether a 2FA plugin is active and shows a dismissible notice with install links if none is found. We recommend protecting `wpmm_access` accounts with [WP 2FA](https://wordpress.org/plugins/wp-2fa/) or [Two Factor](https://wordpress.org/plugins/two-factor/).
+
 ### Does the spam filter work without an Akismet key?
 
 Yes. The local filtering layer runs entirely on your server with no external API calls. It catches the majority of automated bot spam using a honeypot field, submission time check, link count limit, keyword blocklist, IP blocklist, and duplicate detection. Adding an Akismet key activates a second layer of AI-powered cloud filtering for more comprehensive coverage.
@@ -609,6 +647,12 @@ The email template is defined in `includes/email.php`. It uses inline styles for
 ---
 
 ## Changelog
+
+### 1.8.0
+- Feature: Manage Plugin Access — restrict the plugin to specific administrators
+- New `wpmm_access` custom capability; Manage Plugin Access card in Settings
+- Current user always locked in; falls back to manage_options if no access list saved
+- Dismissible 2FA recommendation notice when no 2FA plugin is detected
 
 ### 1.7.0
 - Feature: Spam Log page — full history of all blocked comment attempts

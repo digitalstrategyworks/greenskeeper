@@ -104,7 +104,7 @@ function wpmm_build_menus( $cap ) {
 }
 
 function wpmm_register_menu() {
-    wpmm_build_menus( 'manage_options' );
+    wpmm_build_menus( wpmm_required_cap() );
 }
 
 function wpmm_register_network_menu() {
@@ -253,9 +253,37 @@ function wpmm_page_header( $active_slug ) {
 // Capability gate (shared by all renderers)
 // =========================================================================
 function wpmm_cap_gate() {
-    if ( ! current_user_can( wpmm_required_cap() ) ) {
-        wp_die( esc_html__( 'You do not have permission to access this page.', 'site-maintenance-manager' ) );
+    if ( wpmm_user_can_access() ) {
+        return;
     }
+    wp_die( esc_html__( 'You do not have permission to access this page.', 'site-maintenance-manager' ) );
+}
+
+/**
+ * Returns true if the current user may access the plugin.
+ *
+ * Access logic:
+ * 1. Network admin always requires manage_network.
+ * 2. If any administrator has been explicitly granted wpmm_access, only those
+ *    users may access the plugin.
+ * 3. If no administrator has wpmm_access yet (fresh install or legacy install),
+ *    fall back to manage_options so the plugin is not accidentally locked.
+ */
+function wpmm_user_can_access() {
+    if ( wpmm_is_network_context() ) {
+        return current_user_can( 'manage_network' );
+    }
+    // Check if wpmm_access has been explicitly granted to anyone.
+    $granted = get_users( [
+        'capability' => 'wpmm_access',
+        'fields'     => 'ID',
+        'number'     => 1,
+    ] );
+    if ( empty( $granted ) ) {
+        // No explicit grants yet — fall back to manage_options.
+        return current_user_can( 'manage_options' );
+    }
+    return current_user_can( 'wpmm_access' );
 }
 
 // =========================================================================

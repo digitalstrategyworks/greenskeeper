@@ -6,6 +6,42 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 // ── AJAX handler ──────────────────────────────────────────────────────────────
 add_action( 'wp_ajax_wpmm_save_settings',     'wpmm_ajax_save_settings' );
+add_action( 'wp_ajax_wpmm_save_access',        'wpmm_ajax_save_access' );
+
+function wpmm_ajax_save_access() {
+    check_ajax_referer( 'wpmm_nonce', 'nonce' );
+    // Must currently have access to change access settings.
+    if ( ! wpmm_user_can_access() ) {
+        wp_send_json_error( 'Permission denied.' );
+    }
+
+    $posted_ids = isset( $_POST['access_ids'] ) // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        ? array_map( 'absint', (array) $_POST['access_ids'] ) // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        : [];
+
+    // The current user must always retain access — prevent self-lockout.
+    $current_id = get_current_user_id();
+    if ( ! in_array( $current_id, $posted_ids, true ) ) {
+        $posted_ids[] = $current_id;
+    }
+
+    // Only allow IDs that are actual administrators on this site.
+    $valid_admin_ids = get_users( [ 'role' => 'administrator', 'fields' => 'ID' ] );
+    $valid_admin_ids = array_map( 'absint', $valid_admin_ids );
+    $posted_ids      = array_values( array_intersect( $posted_ids, $valid_admin_ids ) );
+
+    $s = wpmm_get_settings();
+    $s['access_user_ids'] = $posted_ids;
+    wpmm_save_settings( $s );
+
+    // Sync the WordPress capability to match the new list.
+    wpmm_grant_access_to_admins();
+
+    wp_send_json_success( [
+        'message'  => 'Access settings saved.',
+        'user_ids' => $posted_ids,
+    ] );
+}
 add_action( 'wp_ajax_wpmm_generate_api_key',  'wpmm_ajax_generate_api_key' );
 add_action( 'wp_ajax_wpmm_revoke_api_key',    'wpmm_ajax_revoke_api_key' );
 
@@ -86,6 +122,10 @@ function wpmm_render_settings() {
     $spam_ip_blocklist = $s['spam_ip_blocklist'] ?? '';
     $akismet_key       = $s['akismet_key']       ?? '';
     $akismet_active    = defined( 'AKISMET_VERSION' );
+
+    // Manage Access
+    $access_ids      = isset( $s['access_user_ids'] ) ? array_map( 'absint', $s['access_user_ids'] ) : [];
+    $current_user_id = get_current_user_id();
 
     // SMTP settings
     $smtp_mailer     = $s['smtp_mailer']     ?? 'default';
@@ -791,6 +831,76 @@ function wpmm_render_settings() {
                 </div>
 
             </div><!-- #wpmm-spam-card -->
+
+
+            <!-- ── Manage Access ────────────────────────────────────────── -->
+            <div class="wpmm-card" id="wpmm-access-card">
+                <h2 class="wpmm-card-title">
+                    <span class="dashicons dashicons-lock"></span> Manage Plugin Access
+                </h2>
+                <p class="wpmm-card-desc">
+                    Control which administrators can see and use Site Maintenance Manager.
+                    Administrators not listed here will not see the plugin menu or any of
+                    its pages &mdash; the plugin is completely invisible to them.
+                </p>
+                <p class="wpmm-hint" style="margin-bottom:16px;">
+                    <span class="dashicons dashicons-info-outline" style="font-size:14px;vertical-align:middle;"></span>
+                    Your own account is always locked in. You cannot remove yourself to prevent accidental lockout.
+                    To protect these accounts with two-factor authentication, install
+                    <a href="<?php echo esc_url( admin_url( 'plugin-install.php?s=wp-2fa&tab=search&type=term' ) ); ?>" target="_blank">WP 2FA</a>
+                    or <a href="<?php echo esc_url( admin_url( 'plugin-install.php?s=two-factor&tab=search&type=term' ) ); ?>" target="_blank">Two Factor</a>.
+                </p>
+
+                <table class="wpmm-table" id="wpmm-access-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">Access</th>
+                            <th>Administrator</th>
+                            <th>Email</th>
+                            <th>Username</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $admins as $admin ) :
+                            $is_current  = (int) $admin->ID === $current_user_id;
+                            $has_access  = empty( $access_ids ) || in_array( (int) $admin->ID, $access_ids, true );
+                        ?>
+                        <tr>
+                            <td style="text-align:center;">
+                                <input type="checkbox"
+                                       class="wpmm-access-cb"
+                                       value="<?php echo absint( $admin->ID ); ?>"
+                                       <?php checked( $has_access ); ?>
+                                       <?php disabled( $is_current, true ); ?>
+                                       title="<?php echo $is_current ? esc_attr( 'You cannot remove your own access' ) : ''; ?>">
+                            </td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <?php echo get_avatar( $admin->ID, 28, '', '', [ 'style' => 'border-radius:50%;flex-shrink:0;' ] ); ?>
+                                    <strong><?php echo esc_html( $admin->display_name ); ?></strong>
+                                    <?php if ( $is_current ) : ?>
+                                        <span class="wpmm-badge wpmm-badge-success" style="font-size:10px;">You</span>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td style="font-size:13px;color:var(--wpmm-gray);">
+                                <?php echo esc_html( $admin->user_email ); ?>
+                            </td>
+                            <td style="font-size:13px;color:var(--wpmm-gray);">
+                                <?php echo esc_html( $admin->user_login ); ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+                <div class="wpmm-toolbar" style="margin-top:16px;">
+                    <button type="button" class="wpmm-btn wpmm-btn-primary" id="wpmm-save-access-btn">
+                        <span class="dashicons dashicons-yes"></span> Save Access Settings
+                    </button>
+                    <span id="wpmm-access-save-msg" class="wpmm-save-feedback"></span>
+                </div>
+            </div><!-- #wpmm-access-card -->
 
             <?php wpmm_tip_card(); ?>
         </div>

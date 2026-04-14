@@ -1503,4 +1503,57 @@ jQuery(function ($) {
     })();
 
 
+    // =========================================================================
+    // MANAGE ACCESS (Settings page)
+    // =========================================================================
+    (function () {
+        var $card = $('#wpmm-access-card');
+        if ( !$card.length ) return;
+
+        $(document).on('click', '#wpmm-save-access-btn', function () {
+            var $btn = $(this);
+            var $msg = $('#wpmm-access-save-msg');
+
+            var ids = $card.find('.wpmm-access-cb:checked').map(function () {
+                return $(this).val();
+            }).get();
+
+            // Always include disabled (locked) checkboxes — those are the current user
+            $card.find('.wpmm-access-cb:disabled').each(function () {
+                var val = $(this).val();
+                if (ids.indexOf(val) === -1) { ids.push(val); }
+            });
+
+            if (!ids.length) {
+                $msg.html('<span style="color:#dc2626;">At least one administrator must have access.</span>');
+                return;
+            }
+
+            $btn.prop('disabled', true)
+                .html('<span class="dashicons dashicons-update wpmm-spin"></span> Saving…');
+
+            $.post(wpmm.ajax_url, {
+                action:     'wpmm_save_access',
+                nonce:      wpmm.nonce,
+                access_ids: ids
+            })
+            .done(function (res) {
+                $btn.prop('disabled', false)
+                    .html('<span class="dashicons dashicons-yes"></span> Save Access Settings');
+                if (res && res.success) {
+                    $msg.html('<span style="color:#16a34a;">&#10003; Access settings saved.</span>');
+                } else {
+                    $msg.html('<span style="color:#dc2626;">Failed: ' + (res.data || 'unknown error') + '</span>');
+                }
+                setTimeout(function () { $msg.html(''); }, 3500);
+            })
+            .fail(function () {
+                $btn.prop('disabled', false)
+                    .html('<span class="dashicons dashicons-yes"></span> Save Access Settings');
+                $msg.html('<span style="color:#dc2626;">Request failed.</span>');
+            });
+        });
+    })();
+
+
 }); // end jQuery ready
