@@ -1,4 +1,4 @@
-=== Site Maintenance Manager ===
+=== Greenskeeper ===
 Contributors:      tonyzeoli
 Author:            Tony Zeoli
 Author URI:        https://digitalstrategyworks.com
@@ -6,15 +6,15 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        1.8.0
+Stable tag:        1.9.0
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
-Manage WordPress updates, filter comment spam, send branded email reports, and configure SMTP delivery — all from one dashboard.
+Manage WordPress updates across single sites or full Multisite networks, filter comment spam, send branded email reports, and configure SMTP delivery. Single-site and Multisite.
 
 == Description ==
 
-Site Maintenance Manager is a professional WordPress maintenance plugin for developers and agencies. It centralises update management for WordPress Core, plugins, and themes, pairs it with a polished email reporting workflow, and adds layered comment spam protection — all from a single purpose-built admin dashboard.
+Greenskeeper is a professional WordPress maintenance plugin for developers and agencies. It centralises update management for WordPress Core, plugins, and themes, pairs it with a polished email reporting workflow, and adds layered comment spam protection — all from a single purpose-built admin dashboard.
 
 **Updates & Reporting:**
 
@@ -26,6 +26,7 @@ Site Maintenance Manager is a professional WordPress maintenance plugin for deve
 * Configures reliable SMTP email delivery via nine supported providers — no separate SMTP plugin required
 * Manages agency branding: company logo, company name, and default administrator shown on reports
 * Works on single-site WordPress installs and Multisite networks
+* Multisite: Site Scope Selector on Updates, Spam Log, and Settings — view and manage any single site or the full network from Network Admin
 
 **Spam Filter & Comments:**
 
@@ -34,7 +35,7 @@ Site Maintenance Manager is a professional WordPress maintenance plugin for deve
 * Spam Log page: review every blocked comment attempt — filter by rule or IP, add offending IPs to the blocklist with one click, and bulk-delete entries
 * Disable Comments: remove comment support from all post types and hide the Comments admin menu site-wide
 
-**Important — Akismet licensing:** Akismet is free for personal, non-commercial sites only. Any commercial or client site requires a paid Akismet plan available at [akismet.com/plans](https://akismet.com/plans/). Site Maintenance Manager provides the integration; you are responsible for having a valid Akismet licence appropriate for your site's use.
+**Important — Akismet licensing:** Akismet is free for personal, non-commercial sites only. Any commercial or client site requires a paid Akismet plan available at [akismet.com/plans](https://akismet.com/plans/). Greenskeeper provides the integration; you are responsible for having a valid Akismet licence appropriate for your site's use.
 
 **Supported SMTP Providers:**
 
@@ -42,14 +43,14 @@ SendGrid, Mailgun, Brevo, SendLayer, SMTP.com, Gmail / Google Workspace, Microso
 
 **Who it is for:**
 
-Web developers, digital agencies, and WordPress administrators who manage client sites and need a reliable, repeatable maintenance and security workflow with professional client-facing reporting.
+Web developers, digital agencies, and WordPress administrators who manage client sites and need a reliable, repeatable maintenance and security workflow with professional client-facing reporting. Named after the greenskeeper who maintains the golf course — meticulous, professional, invisible.
 
 == Installation ==
 
 = Single-Site Install =
 
 1. In your WordPress admin go to **Plugins → Add New → Upload Plugin**.
-2. Upload `site-maintenance-manager.zip` and click **Install Now**.
+2. Upload `greenskeeper.zip` and click **Install Now**.
 3. Click **Activate Plugin**.
 4. Navigate to **Site Maintenance** in the left-hand admin menu.
 5. Open **Settings** and configure your company branding, client email, default administrator, SMTP delivery, and spam filtering.
@@ -57,14 +58,14 @@ Web developers, digital agencies, and WordPress administrators who manage client
 = Multisite / Network Install =
 
 1. Log in as a Super Admin and go to **Network Admin → Plugins → Add New → Upload Plugin**.
-2. Upload `site-maintenance-manager.zip` and click **Install Now**.
+2. Upload `greenskeeper.zip` and click **Install Now**.
 3. Click **Network Activate** to activate across all sites simultaneously, **or** activate per-site from each site's own Plugins screen.
 4. Navigate to **Site Maintenance** in the Network Admin menu or any site's admin menu.
 5. Each site has its own independent Settings, Update Log, and Email Log.
 
 = Manual Install =
 
-1. Unzip the archive and upload the `site-maintenance-manager` folder to `/wp-content/plugins/`.
+1. Unzip the archive and upload the `greenskeeper` folder to `/wp-content/plugins/`.
 2. Activate from the WordPress Plugins screen.
 
 ---
@@ -176,7 +177,7 @@ From the Spam Log you can: filter by rule or IP, add an IP to the blocklist
 with one click, delete individual entries, or clear the entire log.
 
 
-= Who can access Site Maintenance Manager? =
+= Who can access Greenskeeper? =
 
 By default, any WordPress Administrator can access the plugin. Once you save the
 Manage Plugin Access settings (Settings → Manage Plugin Access), only the
@@ -210,6 +211,31 @@ accounts that have wpmm_access with 2FA via one of these dedicated plugins:
 WP 2FA (by Melapress), Two Factor (official WordPress.org plugin),
 Wordfence Security, or iThemes Security Pro.
 
+
+= How do spam filter settings work on a Multisite network? =
+
+Each sub-site has its own independent spam filter settings stored in that
+site's wpmm_settings option. From Network Admin, go to
+Settings → Spam Filter & Comments. The All Sites view shows a summary table
+of every site with its spam status, Akismet connection, and comments status.
+Select a specific site from the Site Scope Bar to edit its settings. Changes
+only affect that site and are saved immediately.
+
+= Can I run updates for all sites at once, or only one site at a time? =
+
+Both. In Network Admin, the Site Scope Bar on the Updates page defaults to
+All Sites, which shows all available updates for all installed plugins and
+themes. Selecting a specific site filters the list to only the plugins and
+themes activated on that site, and runs updates in that site's context.
+
+= Does the network email report cover all sites? =
+
+Yes. When the Email Reports page is in All Sites scope (Network Admin,
+no site selected), sending the report builds a consolidated email with a
+section per site. Each section contains that site's own Core, Plugins, and
+Themes update tables. When a single site is selected, the report covers
+only that site in the standard single-site format.
+
 = Does the spam filter work without an Akismet API key? =
 
 Yes. The local filtering layer (honeypot field, submission time check, link count
@@ -223,12 +249,12 @@ AI-powered cloud filtering for more comprehensive coverage.
 Akismet's free plan is for personal, non-commercial sites only. Any commercial
 website — including client sites managed by an agency — requires a paid Akismet
 plan. Visit [akismet.com/plans](https://akismet.com/plans/) to choose the right
-plan. Site Maintenance Manager provides the Akismet integration; licensing is your
+plan. Greenskeeper provides the Akismet integration; licensing is your
 responsibility.
 
 = Will the spam filter conflict with the standalone Akismet plugin? =
 
-No. Site Maintenance Manager detects when the standalone Akismet plugin is already
+No. Greenskeeper detects when the standalone Akismet plugin is already
 active and skips its own Akismet API call automatically. Only the local filtering
 layer runs in that case, so you never get double-filtering. The Settings page shows
 a notice when the standalone plugin is detected.
@@ -252,15 +278,45 @@ custom ones.
 
 Two ways to add an IP. From the **Spam Log** page, click the **Block IP** button on any row — the IP is added to the blocklist instantly without leaving the page. Alternatively go to **Settings → Spam Filter & Comments**, add the address to the Blocked IP Addresses textarea (one per line), and click **Save Spam Settings**.
 
+
+= How does Greenskeeper handle Multisite networks? =
+
+In Network Admin, a Site Scope Bar appears at the top of the Updates, Spam Log,
+and Settings pages. You can select "All Sites" to operate across the entire
+network, or choose a specific site to scope the view to that site only.
+
+= What does "All Sites" mode do on the Updates page? =
+
+In All Sites mode the Updates page shows every available update for every plugin
+and theme installed on the network, regardless of which site has it activated.
+Running updates applies them network-wide and logs results to the network admin
+site's update log. The email report lists each site as a separate section with
+its own Core, Plugins, and Themes tables.
+
+= What does single-site scope do on the Updates page? =
+
+When you select a specific site, the Updates page filters the plugin and theme
+list to only show items activated on that site (including network-activated
+plugins). Updates run in that site's context and log to that site's own
+wpmm_update_log table. The email report uses the single-site format.
+
+= Are spam filter settings shared across all sites in a network? =
+
+No. Each site has its own independent spam filter settings. In Network Admin,
+select a site from the scope bar on the Settings page to view and edit that
+site's spam configuration. Selecting "All Sites" shows a summary table of all
+sites with their spam filter status, Akismet connection status, and comments
+toggle state.
+
 = Can I use this plugin alongside WP Mail SMTP or other SMTP plugins? =
 
-It is recommended to use either Site Maintenance Manager's built-in SMTP configuration **or** a separate SMTP plugin — not both. Both plugins hook into `phpmailer_init` and will conflict. If you already have WP Mail SMTP, FluentSMTP, or Post SMTP installed and configured, leave Site Maintenance Manager's SMTP setting on **WordPress Default** and let the other plugin handle delivery.
+It is recommended to use either Greenskeeper's built-in SMTP configuration **or** a separate SMTP plugin — not both. Both plugins hook into `phpmailer_init` and will conflict. If you already have WP Mail SMTP, FluentSMTP, or Post SMTP installed and configured, leave Greenskeeper's SMTP setting on **WordPress Default** and let the other plugin handle delivery.
 
 ---
 
 == SMTP Setup Guides ==
 
-Site Maintenance Manager includes a built-in SMTP configuration panel that reconfigures WordPress's email delivery without requiring a separate plugin. The following guides walk through setting up each supported provider.
+Greenskeeper includes a built-in SMTP configuration panel that reconfigures WordPress's email delivery without requiring a separate plugin. The following guides walk through setting up each supported provider.
 
 Go to **Settings → SMTP & Email Delivery**, click your provider's tile, and enter the credentials described below.
 
@@ -296,7 +352,7 @@ Use this option with any SMTP server not listed as a named provider — for exam
 3. Go to **Settings → API Keys → Create API Key**.
 4. Choose **Restricted Access** and enable **Mail Send → Full Access**.
 5. Copy the API key (it is only shown once).
-6. In Site Maintenance Manager Settings: select **SendGrid**, enter `apikey` (literally, that exact text) as the **Username**, and paste the API key as the **Password**.
+6. In Greenskeeper Settings: select **SendGrid**, enter `apikey` (literally, that exact text) as the **Username**, and paste the API key as the **Password**.
 7. Set your verified sender address as the **From Email**.
 
 **Server details (pre-configured):** `smtp.sendgrid.net` — port `587` — TLS
@@ -312,7 +368,7 @@ Use this option with any SMTP server not listed as a named provider — for exam
 2. Add and verify your sending domain under **Sending → Domains**.
 3. Go to **Sending → Domain Settings → SMTP credentials**.
 4. Note your SMTP login (usually `postmaster@yourdomain.com`) and generate or copy the password.
-5. In Site Maintenance Manager Settings: select **Mailgun**, enter your SMTP login as the **Username**, and the SMTP password as the **Password**.
+5. In Greenskeeper Settings: select **Mailgun**, enter your SMTP login as the **Username**, and the SMTP password as the **Password**.
 6. Set a verified sender address as the **From Email**.
 
 **Server details (pre-configured):** `smtp.mailgun.org` — port `587` — TLS
@@ -329,7 +385,7 @@ Use this option with any SMTP server not listed as a named provider — for exam
 1. Create a free account at [brevo.com](https://brevo.com).
 2. Go to your account profile (top-right) → **SMTP & API**.
 3. Under the **SMTP** tab, note your **Login** (your Brevo account email) and click **Generate a new SMTP Key** to create a password.
-4. In Site Maintenance Manager Settings: select **Brevo**, enter your Brevo login email as the **Username**, and the SMTP key as the **Password**.
+4. In Greenskeeper Settings: select **Brevo**, enter your Brevo login email as the **Username**, and the SMTP key as the **Password**.
 5. Set a sender address you have verified in Brevo as the **From Email**.
 
 **Server details (pre-configured):** `smtp-relay.brevo.com` — port `587` — TLS
@@ -343,7 +399,7 @@ Use this option with any SMTP server not listed as a named provider — for exam
 **Setup steps:**
 1. Sign up at [sendlayer.com](https://sendlayer.com) and add your sending domain.
 2. From the SendLayer dashboard, copy your **SMTP Username** and **SMTP Password**.
-3. In Site Maintenance Manager Settings: select **SendLayer**, enter those credentials, and set a verified address as the **From Email**.
+3. In Greenskeeper Settings: select **SendLayer**, enter those credentials, and set a verified address as the **From Email**.
 
 **Server details (pre-configured):** `smtp.sendlayer.net` — port `587` — TLS
 
@@ -357,7 +413,7 @@ Use this option with any SMTP server not listed as a named provider — for exam
 1. Create an account at [smtp.com](https://smtp.com).
 2. Go to **Sender → SMTP credentials**.
 3. Copy your **Sender Name** (this is the Username) and your **API Key** (this is the Password).
-4. In Site Maintenance Manager Settings: select **SMTP.com**, enter the Sender Name as **Username** and the API Key as **Password**.
+4. In Greenskeeper Settings: select **SMTP.com**, enter the Sender Name as **Username** and the API Key as **Password**.
 5. Set your verified sender address as the **From Email**.
 
 **Server details (pre-configured):** `send.smtp.com` — port `587` — TLS
@@ -372,9 +428,9 @@ Use this option with any SMTP server not listed as a named provider — for exam
 1. Sign in to your Google Account at [myaccount.google.com](https://myaccount.google.com).
 2. Go to **Security** and confirm that **2-Step Verification** is turned on. (App Passwords are not available without it.)
 3. In the Security search bar, search for **App Passwords**.
-4. Click **Create**, choose **Other (custom name)**, and type `WordPress` or `Site Maintenance Manager`.
+4. Click **Create**, choose **Other (custom name)**, and type `WordPress` or `Greenskeeper`.
 5. Google displays a 16-character code. Copy it immediately — it will not be shown again.
-6. In Site Maintenance Manager Settings: select **Gmail / Google**, enter your full Gmail address (`you@gmail.com`) as the **Username**, and paste the 16-character App Password as the **Password**.
+6. In Greenskeeper Settings: select **Gmail / Google**, enter your full Gmail address (`you@gmail.com`) as the **Username**, and paste the 16-character App Password as the **Password**.
 7. Set your Gmail address as the **From Email**.
 
 **Google Workspace (paid) — setup steps:**
@@ -395,7 +451,7 @@ The App Password method above works identically for Workspace accounts. Alternat
 2. Under **Advanced security options**, confirm **Two-step verification** is on.
 3. Click **Create a new app password**.
 4. Copy the generated password.
-5. In Site Maintenance Manager Settings: select **Microsoft / Outlook**, enter your full Outlook address (`you@outlook.com` or `you@hotmail.com`) as the **Username**, and the app password as the **Password**.
+5. In Greenskeeper Settings: select **Microsoft / Outlook**, enter your full Outlook address (`you@outlook.com` or `you@hotmail.com`) as the **Username**, and the app password as the **Password**.
 
 **Microsoft 365 / Office 365 organisations — setup steps:**
 1. A Microsoft 365 admin must enable SMTP AUTH for the sending mailbox. In the **Microsoft 365 Admin Centre** go to: **Users → Active Users → select the user → Mail tab → Manage email apps → check Authenticated SMTP**.
@@ -414,7 +470,7 @@ The App Password method above works identically for Workspace accounts. Alternat
 2. **Updates** — Three sections (WordPress Core, Plugins, Themes) with checkboxes, version numbers, and performing administrator dropdown. Real-time progress bar with per-item status during batch updates.
 3. **Update Log** — Collapsible session accordion with search autocomplete, date filtering, per-page selector, and Previous/Next pagination.
 4. **Email Reports** — Send form with subject line builder, Report Week-Ending Date picker, Update Notes textarea, Additional Manual Updates repeater, and Sent Email History table with preview modal and resend.
-5. **Settings — Company, Client & Administrators** — Logo upload, company name, client email, and Site Administrators table with Gravatar and radio selection.
+5. **Settings — Company, Client & Administrators** (Greenskeeper) — Logo upload, company name, client email, and Site Administrators table with Gravatar and radio selection.
 6. **Settings — Spam Filter & Comments** — Master spam toggle, Disable Comments toggle, local filtering configuration (min time, max links, keyword blocklist, IP blocklist), and Akismet API key field with verify/revoke.
 7. **Spam Log** — All-time stats by rule, paginated blocked-attempt table with filter, Block IP and Delete per row, bulk delete, and Clear All.
 8. **Settings — SMTP & Email Delivery** — Provider tile grid with context-sensitive setup instructions and Send Test Email feature.
@@ -422,6 +478,28 @@ The App Password method above works identically for Workspace accounts. Alternat
 10. **Database Diagnostic** — Expandable panel showing table columns, row counts, and Force DB Upgrade button.
 
 == Changelog ==
+
+= 1.9.0 =
+* Rename: plugin renamed from Greenskeeper to Greenskeeper.
+  All display names, slug, and text domain updated. Internal wpmm_ prefixes
+  and database table names unchanged for full backward compatibility.
+* Feature: Multisite Site Scope Selector on Updates, Spam Log, and Settings pages.
+  A scope bar appears in Network Admin with a dropdown populated by get_sites().
+  Selecting a site filters the page to that site's context; "All Sites" shows
+  the full network view.
+* Feature: Updates page — single-site scope filters plugin and theme lists to
+  only items activated on the selected site (site-level and network-activated).
+  Updates run in that site's blog context and log to its own wpmm_update_log.
+* Feature: Updates page — All Sites mode shows all network-wide available updates.
+  Email report in All Sites mode is a consolidated network report with one
+  section per site, each with its own Core/Plugins/Themes tables.
+* Feature: Spam Filter settings are per-site in Multisite. Network Admin shows
+  a summary overview table (spam on/off, Akismet status, comments status per
+  site) when All Sites is selected, and the full settings form when a specific
+  site is selected.
+* Feature: Network email report — new wpmm_build_network_email_body() function
+  builds a consolidated HTML email listing every site updated in a network run
+  with its own update table sections and a site header for each.
 
 = 1.8.0 =
 * Feature: Manage Plugin Access card in Settings.
@@ -612,7 +690,7 @@ All errors and warnings reported by the Plugin Check plugin have been resolved:
 
 
 = 1.4.9 =
-* Renamed plugin from "WP Maintenance Manager" to "Site Maintenance Manager"
+* Renamed plugin from "WP Maintenance Manager" to "Greenskeeper"
   to comply with WordPress.org plugin repository naming rules, which prohibit
   plugin display names beginning with "WP". All display names, text domain,
   plugin slug, folder name, and main PHP filename updated accordingly.
@@ -727,6 +805,12 @@ All errors and warnings reported by the Plugin Check plugin have been resolved:
 
 == Upgrade Notice ==
 
+= 1.9.0 =
+Plugin renamed to Greenskeeper. Adds Multisite Site Scope Selector for Updates, Spam Log, and Settings. No database changes. Internal prefixes unchanged — existing data is preserved.
+
+= 1.9.0 =
+Plugin renamed to Greenskeeper. All database tables and internal prefixes unchanged — no data migration required. Adds multisite network scope selector for Updates, Spam Log, and Spam Filter settings.
+
 = 1.8.0 =
 Adds Manage Plugin Access — control which administrators can see the plugin. On first upgrade, all current administrators retain access. Uncheck client accounts in Settings → Manage Plugin Access to hide the plugin from them.
 
@@ -745,7 +829,7 @@ WordPress.org Plugin Check compliance fixes. No database or functional changes.
 
 
 = 1.4.9 =
-Plugin renamed to Site Maintenance Manager for WordPress.org compliance. No database or functional changes.
+Plugin renamed to Greenskeeper for WordPress.org compliance. No database or functional changes.
 
 
 = 1.4.8 =
@@ -756,7 +840,7 @@ Adds Avada theme detection and update order guidance. Fixes SMTP From Name using
 Adds Gmail and Microsoft SMTP support. No database changes.
 
 = 1.4.4 =
-Adds built-in SMTP configuration. No database changes. If you use a separate SMTP plugin, leave Site Maintenance Manager's SMTP setting on WordPress Default.
+Adds built-in SMTP configuration. No database changes. If you use a separate SMTP plugin, leave Greenskeeper's SMTP setting on WordPress Default.
 
 = 1.4.3 =
 Email header redesigned. Update Log gains per-page selector and Prev/Next pagination. No database changes.

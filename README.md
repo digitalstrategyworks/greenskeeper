@@ -1,13 +1,13 @@
-# Site Maintenance Manager
+# Greenskeeper
 
-**Version:** 1.8.0  
+**Version:** 1.9.0  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Requires WordPress:** 5.8+  
 **Requires PHP:** 8.0+  
 **Tested up to:** WordPress 6.9
 
-A professional WordPress maintenance plugin for developers and agencies. Manage core, plugin, and theme updates, filter comment spam with layered local and Akismet cloud filtering, send branded HTML email reports to clients, and configure reliable SMTP email delivery — all from a single, purpose-built admin dashboard.
+A professional WordPress maintenance plugin for developers and agencies — named after the greenskeeper who maintains the golf course to an exacting standard so players never think about what's underneath. Manage core, plugin, and theme updates, filter comment spam, send branded HTML email reports, and configure SMTP delivery — all from one dashboard. Full Multisite support with per-site scope selection.
 
 ---
 
@@ -42,7 +42,7 @@ A professional WordPress maintenance plugin for developers and agencies. Manage 
 
 ## What It Does
 
-Site Maintenance Manager replaces the ad hoc workflow of tab-switching between the WordPress Updates screen, a spreadsheet, and an email client. It gives you one panel to:
+Greenskeeper replaces the ad hoc workflow of tab-switching between the WordPress Updates screen, a spreadsheet, and an email client. It gives you one panel to:
 
 - **Run updates** for WordPress Core, all plugins, and all themes — in separate, clearly labelled sections with per-item checkboxes, a real-time progress bar, and plain-English error explanations
 - **Log every result** automatically to a searchable, paginated history
@@ -162,8 +162,14 @@ Site Maintenance Manager replaces the ad hoc workflow of tab-switching between t
 ### Multisite / Network
 - Works on both single-site and Multisite networks
 - Network-activate to provision all sub-sites simultaneously
-- Each sub-site has its own isolated update log and email log
+- Each sub-site has its own isolated update log, email log, and spam log
 - Cross-site AJAX uses `switch_to_blog()` to always read from the correct table
+- **Site Scope Bar** on Updates, Email Reports, Spam Log, and Settings (Spam Filter card) when in Network Admin
+- Dropdown lists every registered site; selecting one scopes all operations to that site
+- **Updates per-site mode:** filters to plugins/themes activated on the selected site only
+- **Spam Filter per-site settings:** All Sites view shows a summary table; selecting a site loads and saves that site's settings independently
+- **Network email report:** All Sites mode builds a consolidated report with a section per site
+- **Spam Log per-site:** selecting a site shows only that site's blocked attempts
 
 ---
 
@@ -172,7 +178,7 @@ Site Maintenance Manager replaces the ad hoc workflow of tab-switching between t
 ### From WordPress admin (recommended)
 
 1. Go to **Plugins → Add New → Upload Plugin**
-2. Upload `site-maintenance-manager.zip`
+2. Upload `greenskeeper.zip`
 3. Click **Install Now** then **Activate Plugin**
 4. Navigate to **Site Maintenance** in the left admin menu
 
@@ -184,7 +190,7 @@ Site Maintenance Manager replaces the ad hoc workflow of tab-switching between t
 
 ### Manual
 
-1. Unzip and upload the `site-maintenance-manager` folder to `/wp-content/plugins/`
+1. Unzip and upload the `greenskeeper` folder to `/wp-content/plugins/`
 2. Activate from the WordPress Plugins screen
 
 ### First-time setup
@@ -296,7 +302,7 @@ All comment attempts blocked by any filter rule are recorded here — locally-fi
 
 Go to **Site Maintenance → Settings** and scroll to the **Manage Plugin Access** card.
 
-The table lists every WordPress Administrator on this site. Check the accounts that should have access to Site Maintenance Manager and uncheck any that should not — for example, a client's administrator account.
+The table lists every WordPress Administrator on this site. Check the accounts that should have access to Greenskeeper and uncheck any that should not — for example, a client's administrator account.
 
 Click **Save Access Settings**. Changes take effect immediately. Unchecked users will no longer see the Site Maintenance menu item or be able to reach any plugin page.
 
@@ -355,7 +361,7 @@ Settings has four cards. Each can be configured independently.
 
 Akismet's free plan is restricted to personal, non-commercial websites with no advertising, no products for sale, and no services offered. Every commercial website — including client sites managed on retainer by a web agency — is required to use a paid Akismet plan.
 
-Site Maintenance Manager provides the Akismet API integration. Compliance with Akismet's terms of service is the responsibility of the site owner. Visit [akismet.com/plans](https://akismet.com/plans/) to review plan options.
+Greenskeeper provides the Akismet API integration. Compliance with Akismet's terms of service is the responsibility of the site owner. Visit [akismet.com/plans](https://akismet.com/plans/) to review plan options.
 
 ---
 
@@ -588,7 +594,7 @@ From the page you can filter by rule or IP, add an IP to the blocklist with one 
 
 In the `{prefix}_wpmm_spam_log` database table, created automatically when the plugin activates or upgrades. Entries are never deleted automatically — use the **Delete Selected** or **Clear All** controls on the Spam Log page to manage storage.
 
-### Who can access Site Maintenance Manager?
+### Who can access Greenskeeper?
 
 By default (on a fresh install), every WordPress Administrator can access the plugin. Once you save the Manage Plugin Access card in Settings, only explicitly checked administrators can see the plugin. All others — including client admins — see no menu item and cannot reach any plugin page.
 
@@ -604,13 +610,37 @@ Lockout from within the plugin UI is impossible — your own account is always k
 
 The plugin doesn't implement 2FA itself — it detects whether a 2FA plugin is active and shows a dismissible notice with install links if none is found. We recommend protecting `wpmm_access` accounts with [WP 2FA](https://wordpress.org/plugins/wp-2fa/) or [Two Factor](https://wordpress.org/plugins/two-factor/).
 
+### How does Greenskeeper handle Multisite networks?
+
+In Network Admin, a Site Scope Bar appears at the top of the Updates, Spam Log, and Settings pages. Choose a specific site to scope all operations to that site, or select "All Sites" for the full network view.
+
+### What does single-site scope do on the Updates page?
+
+The plugin and theme lists are filtered to only items activated on the selected site (including network-activated plugins). Updates run in that site's context and log to that site's own `wpmm_update_log` table.
+
+### Are spam filter settings shared across a Multisite network?
+
+No. Each site has independent spam settings. In Network Admin, the Settings page Spam Filter card shows an overview table when "All Sites" is selected, and the full configuration form when a specific site is chosen.
+
+### How do spam filter settings work on Multisite?
+
+Each sub-site has its own independent spam settings. From Network Admin, go to **Settings → Spam Filter & Comments**. The All Sites view shows a summary of every site. Select a site from the Site Scope Bar to edit its settings — changes only affect that site.
+
+### Can I run updates for all sites at once or one at a time?
+
+Both. In Network Admin, the Site Scope Bar on the Updates page defaults to All Sites (all installed updates). Selecting a site filters to that site's activated plugins and themes only, and runs updates in that site's context.
+
+### Does the network email report cover all sites?
+
+Yes. When the Email Reports page is in All Sites scope, the report is a consolidated email with a per-site section. When a single site is selected, the report covers only that site in the standard format.
+
 ### Does the spam filter work without an Akismet key?
 
 Yes. The local filtering layer runs entirely on your server with no external API calls. It catches the majority of automated bot spam using a honeypot field, submission time check, link count limit, keyword blocklist, IP blocklist, and duplicate detection. Adding an Akismet key activates a second layer of AI-powered cloud filtering for more comprehensive coverage.
 
 ### Do I need a paid Akismet account?
 
-Akismet's free plan is for personal, non-commercial sites only. Any commercial website — including client sites managed by a web agency — requires a paid Akismet plan. Visit [akismet.com/plans](https://akismet.com/plans/) to choose the right plan. Site Maintenance Manager provides the integration; licensing is your responsibility.
+Akismet's free plan is for personal, non-commercial sites only. Any commercial website — including client sites managed by a web agency — requires a paid Akismet plan. Visit [akismet.com/plans](https://akismet.com/plans/) to choose the right plan. Greenskeeper provides the integration; licensing is your responsibility.
 
 ### Will the spam filter conflict with the standalone Akismet plugin?
 
@@ -627,7 +657,7 @@ Yes. The **Disable Comments** toggle in Settings removes comment support from ev
 
 
 **Do I need a separate SMTP plugin?**
-No. Site Maintenance Manager includes built-in SMTP configuration. If you already use WP Mail SMTP, FluentSMTP, or Post SMTP, leave this plugin's SMTP setting on WordPress Default to avoid conflicts.
+No. Greenskeeper includes built-in SMTP configuration. If you already use WP Mail SMTP, FluentSMTP, or Post SMTP, leave this plugin's SMTP setting on WordPress Default to avoid conflicts.
 
 **My updates are not appearing in the Update Log.**
 If you upgraded the plugin by uploading files (without deactivating first), the database may not be fully upgraded. Open Update Log, expand the Database Diagnostic panel, and click Force DB Upgrade Now.
@@ -647,6 +677,14 @@ The email template is defined in `includes/email.php`. It uses inline styles for
 ---
 
 ## Changelog
+
+### 1.9.0
+- Rename: Greenskeeper → Greenskeeper (display only; wpmm_ internals unchanged)
+- Feature: Site Scope Selector on Updates, Spam Log, and Settings in Network Admin
+- Feature: Updates single-site scope filters to activated plugins/themes for that site
+- Feature: Updates All Sites mode with consolidated per-site network email report
+- Feature: Spam Filter per-site settings with Network Admin overview table
+- Feature: wpmm_build_network_email_body() for consolidated network maintenance emails
 
 ### 1.8.0
 - Feature: Manage Plugin Access — restrict the plugin to specific administrators

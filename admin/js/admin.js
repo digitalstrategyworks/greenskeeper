@@ -189,8 +189,9 @@ jQuery(function ($) {
         $('#wpmm-global-progress').prop('hidden', true);
 
         $.post(wpmm.ajax_url, {
-            action: 'wpmm_get_updates',
-            nonce:  wpmm.nonce
+            action:  'wpmm_get_updates',
+            nonce:   wpmm.nonce,
+            site_id: $('#wpmm-scope-site-id').val() || 0
         }, function (res) {
             if (!res.success) {
                 $container.html(
@@ -423,7 +424,8 @@ jQuery(function ($) {
             item_type:  type,
             item_slug:  slug,
             session_id: sessionId,
-            package:    pkg
+            package:    pkg,
+            site_id:    $('#wpmm-scope-site-id').val() || 0
         }, function (res) {
             $btn.prop('disabled', false);
             var itemName = (res.data && res.data.name) ? res.data.name : slug;
@@ -503,7 +505,9 @@ jQuery(function ($) {
             session_id:      resolvedSession,
             admin_id:        performingAdminId,
             manual_entries:  manualEntries,
-            update_note:     updateNote
+            update_note:     updateNote,
+            site_id:         $('#wpmm-email-scope-site-id').val() || 0,
+            network_all:     ($('#wpmm-email-scope-site-id').length && $('#wpmm-email-scope-site-id').val() == '0') ? 1 : 0
         }, function (res) {
             $btn.prop('disabled', false)
                 .html('<span class="dashicons dashicons-email"></span> Send Report Email');
@@ -1309,10 +1313,12 @@ jQuery(function ($) {
                 nonce:                wpmm.nonce,
                 spam_filter_enabled:  $('#wpmm-spam-filter-enabled').is(':checked') ? 1 : '',
                 comments_disabled:    $('#wpmm-comments-disabled').is(':checked')   ? 1 : '',
+                spam_site_id:         $('#wpmm-spam-scope-site-id').val() || '0',
                 spam_min_time:        $('#wpmm-spam-min-time').val(),
                 spam_max_links:       $('#wpmm-spam-max-links').val(),
                 spam_keywords:        $('#wpmm-spam-keywords').val(),
-                spam_ip_blocklist:    $('#wpmm-spam-ip-blocklist').val()
+                spam_ip_blocklist:    $('#wpmm-spam-ip-blocklist').val(),
+                site_id:              $('#wpmm-spam-site-id').val() || 0
             })
             .done(function (res) {
                 $btn.prop('disabled', false)
@@ -1552,6 +1558,32 @@ jQuery(function ($) {
                     .html('<span class="dashicons dashicons-yes"></span> Save Access Settings');
                 $msg.html('<span style="color:#dc2626;">Request failed.</span>');
             });
+        });
+    })();
+
+
+    // =========================================================================
+    // SITE SCOPE BAR (Network Admin — Updates, Spam Log, Settings)
+    // =========================================================================
+    (function () {
+        if ( !$('#wpmm-site-scope-select').length ) return;
+
+        $(document).on('click', '#wpmm-scope-apply', function () {
+            var siteId = $('#wpmm-site-scope-select').val();
+            var url    = new URL( window.location.href );
+            if ( siteId && siteId !== '0' ) {
+                url.searchParams.set('site_id', siteId);
+            } else {
+                url.searchParams.delete('site_id');
+            }
+            // Remove paged param when changing scope
+            url.searchParams.delete('paged');
+            window.location.href = url.toString();
+        });
+
+        // Also trigger on Enter key in select
+        $(document).on('keydown', '#wpmm-site-scope-select', function(e) {
+            if (e.key === 'Enter') { $('#wpmm-scope-apply').trigger('click'); }
         });
     })();
 

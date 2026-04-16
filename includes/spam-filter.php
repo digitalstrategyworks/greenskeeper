@@ -1,6 +1,6 @@
 <?php
 /**
- * Spam Filter — Site Maintenance Manager
+ * Spam Filter — Greenskeeper
  *
  * Provides two layers of comment spam protection:
  *
@@ -262,7 +262,7 @@ function wpmm_akismet_check( $api_key, $comment_data ) {
             'body'      => $body,
             'timeout'   => 10,
             'headers'   => [
-                'User-Agent' => 'Site Maintenance Manager/' . WPMM_VERSION . ' | Akismet/WP',
+                'User-Agent' => 'Greenskeeper/' . WPMM_VERSION . ' | Akismet/WP',
             ],
         ]
     );
@@ -340,6 +340,13 @@ function wpmm_ajax_save_spam_settings() {
         wp_send_json_error( 'Permission denied.' );
     }
 
+    $site_id  = absint( $_POST['spam_site_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    $switched = false;
+    if ( is_multisite() && $site_id > 0 && $site_id !== get_current_blog_id() ) {
+        switch_to_blog( $site_id );
+        $switched = true;
+    }
+
     $s = wpmm_get_settings();
 
     $s['spam_filter_enabled'] = isset( $_POST['spam_filter_enabled'] ) ? 1 : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -350,6 +357,9 @@ function wpmm_ajax_save_spam_settings() {
     $s['spam_ip_blocklist']   = sanitize_textarea_field( wp_unslash( $_POST['spam_ip_blocklist'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
     wpmm_save_settings( $s );
+    if ( $switched ) {
+        restore_current_blog();
+    }
     wp_send_json_success( 'Spam filter settings saved.' );
 }
 
@@ -411,7 +421,7 @@ function wpmm_spam_die( $reason = 'spam', $comment_data = [] ) {
     $msg = $messages[ $reason ] ?? 'Your comment could not be posted.';
     wp_die(
         esc_html( $msg ),
-        esc_html__( 'Comment Blocked', 'site-maintenance-manager' ),
+        esc_html__( 'Comment Blocked', 'greenskeeper' ),
         [ 'response' => 403, 'back_link' => true ]
     );
 }

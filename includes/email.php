@@ -142,7 +142,7 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
             </tr>";
         }
         if ( $manual_rows ) {
-            $manual_note = "<p style='color:#6b7280;font-size:12px;font-style:italic;margin:8px 0 0;'>Plugins or themes updated manually outside the control of Site Maintenance Manager due to functional licensing issues that prevent this plugin from accessing the specific panels where these plugins are located in the plugin or theme admin.</p>";
+            $manual_note = "<p style='color:#6b7280;font-size:12px;font-style:italic;margin:8px 0 0;'>Plugins or themes updated manually outside the control of Greenskeeper due to functional licensing issues that prevent this plugin from accessing the specific panels where these plugins are located in the plugin or theme admin.</p>";
             $sections .= "
         <h3 style='color:#1e3a5f;font-size:15px;margin:28px 0 10px;border-bottom:2px solid #e5e7eb;padding-bottom:6px;'>&#128295; Additional Manual Updates</h3>
         " . $manual_note . "
@@ -219,7 +219,7 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
         : '';
 
     // ── Footer ────────────────────────────────────────────────────────────────
-    $sender = $company ?: 'Site Maintenance Manager';
+    $sender = $company ?: 'Greenskeeper';
 
     // ── Update note block ─────────────────────────────────────────────────────
     $update_note_block = '';
@@ -280,7 +280,7 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
 function wpmm_send_email( $to, $subject, $body, $admin_id = 0 ) {
     global $wpdb;
 
-    $from_name  = 'Site Maintenance Manager';
+    $from_name  = 'Greenskeeper';
     $from_email = get_option( 'admin_email' );
 
     $s = wpmm_get_settings();
@@ -323,8 +323,156 @@ function wpmm_send_email( $to, $subject, $body, $admin_id = 0 ) {
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- legitimate insert to custom plugin table.
     if ( $result === false && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
         // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
-        trigger_error( 'Site Maintenance Manager: email log insert failed: ' . esc_html( $wpdb->last_error ), E_USER_WARNING );
+        trigger_error( 'Greenskeeper: email log insert failed: ' . esc_html( $wpdb->last_error ), E_USER_WARNING );
     }
 
     return [ 'success' => $sent, 'email_id' => $wpdb->insert_id ];
+}
+
+/**
+ * Build a consolidated network maintenance email.
+ * Called when updates were run in All Sites mode.
+ *
+ * @param array $sites_data  Array of [ 'blog_id' => N, 'site_name' => '', 'site_url' => '', 'entries' => [...] ]
+ * @param int   $admin_id    Performing administrator.
+ * @param string $update_note Optional note from administrator.
+ */
+function wpmm_build_network_email_body( $sites_data, $admin_id = 0, $update_note = '' ) {
+
+    $s        = wpmm_get_settings();
+    $logo_url = ! empty( $s['logo_url'] )     ? $s['logo_url']     : '';
+    $company  = ! empty( $s['company_name'] ) ? $s['company_name'] : '';
+
+    $perf_admin = null;
+    if ( $admin_id ) {
+        $u = get_user_by( 'id', $admin_id );
+        if ( $u ) { $perf_admin = $u; }
+    }
+    if ( ! $perf_admin ) {
+        $perf_admin = wpmm_get_default_admin();
+    }
+
+    // ── Build per-site sections ───────────────────────────────────────────────
+    $all_sections = '';
+    foreach ( $sites_data as $site ) {
+        $site_name = esc_html( $site['site_name'] ?? '' );
+        $site_url  = esc_url( $site['site_url']  ?? '' );
+        $entries   = $site['entries'] ?? [];
+
+        if ( empty( $entries ) ) {
+            continue;
+        }
+
+        $build_rows = function( array $ents ) {
+            $html = '';
+            foreach ( $ents as $entry ) {
+                $success = isset( $entry->status ) && $entry->status === 'success';
+                $icon    = $success ? '&#9989;' : '&#10060;';
+                $badge   = $success
+                    ? '<span style="color:#16a34a;font-weight:700;">Updated Successfully</span>'
+                    : '<span style="color:#dc2626;font-weight:700;">Update Failed</span>';
+                $old = isset( $entry->old_version ) ? esc_html( $entry->old_version ) : '';
+                $new = isset( $entry->new_version ) && $entry->new_version
+                    ? ' &rarr; <strong>' . esc_html( $entry->new_version ) . '</strong>' : '';
+                $name = isset( $entry->item_name ) ? esc_html( $entry->item_name ) : '(unknown)';
+                $html .= "<tr>
+                  <td style='padding:10px 14px;border-bottom:1px solid #e5e7eb;'>
+                    {$icon} <strong>{$name}</strong>
+                    <br><small style='color:#9ca3af;'>{$old}{$new}</small>
+                  </td>
+                  <td style='padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;'>{$badge}</td>
+                </tr>";
+            }
+            return $html;
+        };
+
+        $core_rows = $plugin_rows = $theme_rows = [];
+        foreach ( $entries as $entry ) {
+            $type = strtolower( trim( $entry->item_type ?? '' ) );
+            if ( $type === 'core' )        { $core_rows[]   = $entry; }
+            elseif ( $type === 'theme' )   { $theme_rows[]  = $entry; }
+            else                           { $plugin_rows[] = $entry; }
+        }
+
+        $build_section = function( $title, $ents ) use ( $build_rows ) {
+            if ( empty( $ents ) ) return '';
+            $rows = $build_rows( $ents );
+            return "<h4 style='color:#374151;font-size:13px;margin:16px 0 8px;'>{$title}</h4>
+            <table width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse;border:1px solid #e5e7eb;'>
+              <thead><tr style='background:#f3f4f6;'>
+                <th style='padding:8px 12px;text-align:left;font-size:11px;color:#6b7280;text-transform:uppercase;'>Item</th>
+                <th style='padding:8px 12px;text-align:right;font-size:11px;color:#6b7280;text-transform:uppercase;'>Status</th>
+              </tr></thead>
+              <tbody>{$rows}</tbody>
+            </table>";
+        };
+
+        $site_sections = $build_section( '&#127758; WordPress Core', $core_rows )
+                       . $build_section( '&#128268; Plugins', $plugin_rows )
+                       . $build_section( '&#127912; Themes', $theme_rows );
+
+        $all_sections .= "
+        <div style='margin:28px 0 8px;padding:14px 16px;background:#f0f7ff;border-left:4px solid #2563eb;border-radius:0 6px 6px 0;'>
+            <p style='margin:0;font-size:15px;font-weight:700;color:#1e3a5f;'>{$site_name}</p>
+            <p style='margin:2px 0 0;font-size:12px;color:#6b7280;'>
+                <a href='{$site_url}' style='color:#2563eb;text-decoration:none;'>{$site_url}</a>
+            </p>
+        </div>
+        {$site_sections}";
+    }
+
+    if ( $all_sections === '' ) {
+        $all_sections = "<p style='color:#6b7280;font-size:13px;margin:24px 0;'>No updates were performed on any site in this network run.</p>";
+    }
+
+    // ── Header elements (same as single-site) ─────────────────────────────────
+    $network_url  = network_site_url();
+    $network_name = get_network()->site_name ?? 'WordPress Network';
+
+    $ext_icon = "<svg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='#93c5fd' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='display:inline-block;vertical-align:middle;margin-left:3px;'><path d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/><polyline points='15 3 21 3 21 9'/><line x1='10' y1='14' x2='21' y2='3'/></svg>";
+
+    $site_block = "<p style='margin:0 0 3px;color:#bfdbfe;font-size:11px;text-transform:uppercase;letter-spacing:.08em;'>Network</p>
+        <p style='margin:0 0 3px;color:#ffffff;font-size:20px;font-weight:700;line-height:1.2;'>" . esc_html( $network_name ) . "</p>
+        <p style='margin:0;font-size:13px;'><a href='" . esc_url( $network_url ) . "' style='color:#93c5fd;text-decoration:none;'>" . esc_html( $network_url ) . $ext_icon . "</a></p>";
+
+    $logo_img = $logo_url ? "<img src='" . esc_url( $logo_url ) . "' alt='" . esc_attr( $company ) . "' style='max-height:24px;max-width:90px;display:block;filter:brightness(0) invert(1);'>" : '';
+    $brand_cells = '';
+    if ( $logo_img )  { $brand_cells .= "<td style='vertical-align:middle;padding-right:10px;'>{$logo_img}</td>"; }
+    if ( $company )   { $brand_cells .= "<td style='vertical-align:middle;'><span style='color:#fff;font-size:16px;font-weight:700;'>" . esc_html( $company ) . "</span></td>"; }
+    $brand_block = $brand_cells ? "<table cellpadding='0' cellspacing='0' border='0'><tr>{$brand_cells}</tr></table>" : '';
+
+    $administered_by = $perf_admin
+        ? "<p style='color:#bfdbfe;font-size:13px;margin:8px 0 0;'>Network maintenance performed by <strong style='color:#fff;'>" . esc_html( $perf_admin->display_name ) . "</strong>.</p>"
+        : '';
+
+    $divider = ( $brand_block || $administered_by ) ? "<div style='border-top:1px solid rgba(255,255,255,.2);margin:16px 0 14px;'></div>" : '';
+    $sender  = $company ?: 'Greenskeeper';
+
+    $update_note_block = '';
+    if ( ! empty( $update_note ) ) {
+        $note_lines = nl2br( esc_html( $update_note ) );
+        $update_note_block = '<div style="padding:24px 36px 0;"><div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:18px 22px;"><p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.06em;">Note from your administrator</p><p style="margin:0;font-size:14px;color:#78350f;line-height:1.7;">' . $note_lines . '</p></div></div>';
+    }
+
+    return '<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network Maintenance Report</title></head>
+<body style="font-family:Georgia,serif;background:#f1f5f9;margin:0;padding:0;">
+  <div style="max-width:680px;margin:40px auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.1);">
+    <div style="background:#1e3a5f;padding:28px 36px 24px;">
+      ' . $site_block . '
+      ' . $divider . '
+      ' . $brand_block . '
+      ' . $administered_by . '
+    </div>
+    <div style="padding:32px 36px;">
+      <h2 style="color:#1e3a5f;margin:0 0 6px;font-size:18px;font-family:Georgia,serif;">Network WordPress Maintenance Report</h2>
+      <p style="color:#6b7280;font-size:13px;margin:0 0 4px;">The following updates were performed across your network.</p>
+      ' . $all_sections . '
+    </div>
+    ' . $update_note_block . '
+    <div style="background:#f8fafc;padding:18px 36px;border-top:1px solid #e5e7eb;text-align:center;font-size:12px;color:#9ca3af;">
+      Sent by ' . esc_html( $sender ) . ' &bull; <a href="' . esc_url( $network_url ) . '" style="color:#9ca3af;">' . esc_html( $network_url ) . '</a>
+    </div>
+  </div>
+</body></html>';
 }

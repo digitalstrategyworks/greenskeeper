@@ -29,8 +29,8 @@ define( 'WPMM_SLUG_SPAM',        'wpmm-spam-log' );
  */
 function wpmm_build_menus( $cap ) {
     add_menu_page(
-        'Site Maintenance Manager',
-        'Site Maintenance',
+        'Greenskeeper',
+        'Greenskeeper',
         $cap,
         WPMM_SLUG_PARENT,
         'wpmm_render_no_page',
@@ -44,7 +44,7 @@ function wpmm_build_menus( $cap ) {
 
     $hooks[] = add_submenu_page(
         WPMM_SLUG_PARENT,
-        'Maintenance Manager — Dashboard',
+        'Greenskeeper — Dashboard',
         'Dashboard',
         $cap,
         WPMM_SLUG_DASHBOARD,
@@ -52,7 +52,7 @@ function wpmm_build_menus( $cap ) {
     );
     $hooks[] = add_submenu_page(
         WPMM_SLUG_PARENT,
-        'Maintenance Manager — Updates',
+        'Greenskeeper — Updates',
         'Updates',
         $cap,
         WPMM_SLUG_UPDATES,
@@ -60,7 +60,7 @@ function wpmm_build_menus( $cap ) {
     );
     $hooks[] = add_submenu_page(
         WPMM_SLUG_PARENT,
-        'Maintenance Manager — Update Log',
+        'Greenskeeper — Update Log',
         'Update Log',
         $cap,
         WPMM_SLUG_LOG,
@@ -68,7 +68,7 @@ function wpmm_build_menus( $cap ) {
     );
     $hooks[] = add_submenu_page(
         WPMM_SLUG_PARENT,
-        'Maintenance Manager — Email Reports',
+        'Greenskeeper — Email Reports',
         'Email Reports',
         $cap,
         WPMM_SLUG_EMAIL,
@@ -85,7 +85,7 @@ function wpmm_build_menus( $cap ) {
 
     $hooks[] = add_submenu_page(
         WPMM_SLUG_PARENT,
-        'Maintenance Manager — Spam Log',
+        'Greenskeeper — Spam Log',
         'Spam Log',
         $cap,
         WPMM_SLUG_SPAM,
@@ -93,7 +93,7 @@ function wpmm_build_menus( $cap ) {
     );
     $hooks[] = add_submenu_page(
         WPMM_SLUG_PARENT,
-        'Maintenance Manager — Settings',
+        'Greenskeeper — Settings',
         'Settings',
         $cap,
         WPMM_SLUG_SETTINGS,
@@ -226,7 +226,7 @@ function wpmm_page_header( $active_slug ) {
                 <span class="dashicons dashicons-shield-alt"></span>
             <?php endif; ?>
             <div>
-                <h1>Site Maintenance Manager<?php echo $wpmm_company ? ' &mdash; ' . esc_html( $wpmm_company ) : ''; ?></h1>
+                <h1>Greenskeeper<?php echo $wpmm_company ? ' &mdash; ' . esc_html( $wpmm_company ) : ''; ?></h1>
                 <p>
                     <?php echo esc_html( get_bloginfo( 'name' ) ); ?> &mdash;
                     <?php echo esc_url( get_bloginfo( 'url' ) ); ?>
@@ -249,6 +249,58 @@ function wpmm_page_header( $active_slug ) {
     <?php
 }
 
+
+// =========================================================================
+// SITE SCOPE BAR — renders in Network Admin on Updates, Spam Log, Settings
+// Returns the currently-selected site_id (0 = All Sites)
+// =========================================================================
+function wpmm_site_scope_bar( $current_page_slug ) {
+    if ( ! wpmm_is_network_context() ) {
+        return 0; // Not in Network Admin — no bar, no switching
+    }
+
+    $sites   = get_sites( [ 'number' => 200, 'orderby' => 'blogname', 'order' => 'ASC' ] );
+    $site_id = absint( $_GET['site_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+    $page_url = wpmm_subpage_url( $current_page_slug );
+    ?>
+    <div class="wpmm-card wpmm-scope-bar" style="margin-bottom:16px;padding:14px 20px;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span class="dashicons dashicons-networking" style="color:var(--wpmm-blue);font-size:18px;flex-shrink:0;"></span>
+            <strong style="font-size:13px;color:var(--wpmm-dark);white-space:nowrap;">Network Scope:</strong>
+            <select id="wpmm-site-scope-select" class="wpmm-input" style="max-width:280px;">
+                <option value="0" <?php selected( $site_id, 0 ); ?>>&#8212; All Sites</option>
+                <?php foreach ( $sites as $site ) : ?>
+                    <option value="<?php echo absint( $site->blog_id ); ?>"
+                        <?php selected( $site_id, $site->blog_id ); ?>>
+                        <?php echo esc_html( $site->blogname ?: $site->domain ); ?>
+                        &mdash; <?php echo esc_html( $site->domain . $site->path ); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <button type="button" class="wpmm-btn wpmm-btn-primary wpmm-btn-sm" id="wpmm-scope-apply">
+                <span class="dashicons dashicons-filter"></span> Apply
+            </button>
+            <?php if ( $site_id > 0 ) :
+                $current_site = get_site( $site_id );
+                $site_label   = $current_site ? esc_html( $current_site->blogname ?: $current_site->domain ) : '#' . $site_id;
+            ?>
+                <span class="wpmm-badge wpmm-badge-success" style="font-size:11px;">
+                    Viewing: <?php echo $site_label; // Already escaped above ?>
+                </span>
+                <a href="<?php echo esc_url( $page_url ); ?>"
+                   class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm"
+                   style="font-size:12px;">&times; All Sites</a>
+            <?php else : ?>
+                <span class="wpmm-badge" style="font-size:11px;background:#f1f5f9;color:#64748b;">
+                    All Sites
+                </span>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php
+    return $site_id;
+}
+
 // =========================================================================
 // Capability gate (shared by all renderers)
 // =========================================================================
@@ -256,7 +308,7 @@ function wpmm_cap_gate() {
     if ( wpmm_user_can_access() ) {
         return;
     }
-    wp_die( esc_html__( 'You do not have permission to access this page.', 'site-maintenance-manager' ) );
+    wp_die( esc_html__( 'You do not have permission to access this page.', 'greenskeeper' ) );
 }
 
 /**
@@ -286,12 +338,96 @@ function wpmm_user_can_access() {
     return current_user_can( 'wpmm_access' );
 }
 
+
+
+// =========================================================================
+// MULTISITE SITE SCOPE HELPERS
+// =========================================================================
+
+/**
+ * Returns the currently-selected site ID from the ?site_id= URL parameter.
+ * 0 means "All Sites". Only meaningful in Network Admin context.
+ */
+function wpmm_get_scoped_site_id() {
+    if ( ! wpmm_is_network_context() ) {
+        return get_current_blog_id();
+    }
+    return absint( $_GET['site_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+}
+
+/**
+ * Render the Site Scope Bar — shown at top of Updates, Spam Log, and Settings
+ * (Spam Filter card) pages when in Network Admin context.
+ *
+ * @param string $page_slug  The current page slug, used to build the base URL.
+ */
+function wpmm_site_scope_bar( $page_slug ) {
+    if ( ! wpmm_is_network_context() ) {
+        return;
+    }
+
+    $sites      = get_sites( [ 'number' => 200, 'orderby' => 'domain', 'order' => 'ASC' ] );
+    $current_id = wpmm_get_scoped_site_id();
+    $base_url   = wpmm_subpage_url( $page_slug );
+
+    ?>
+    <div class="wpmm-scope-bar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;padding:12px 16px;background:#f0f7ff;border:1px solid #bfdbfe;border-radius:8px;">
+        <span class="dashicons dashicons-networking" style="color:#2563eb;font-size:18px;flex-shrink:0;"></span>
+        <strong style="font-size:13px;color:#1e3a5f;white-space:nowrap;">Network Scope:</strong>
+        <select id="wpmm-site-scope" class="wpmm-input" style="max-width:300px;min-width:200px;">
+            <option value="0" <?php selected( $current_id, 0 ); ?>>— All Sites —</option>
+            <?php foreach ( $sites as $site ) :
+                switch_to_blog( $site->blog_id );
+                $site_name = get_bloginfo( 'name' );
+                $site_url  = get_bloginfo( 'url' );
+                restore_current_blog();
+            ?>
+            <option value="<?php echo absint( $site->blog_id ); ?>"
+                <?php selected( $current_id, (int) $site->blog_id ); ?>>
+                <?php echo esc_html( $site_name ); ?> &mdash; <?php echo esc_html( $site_url ); ?>
+            </option>
+            <?php endforeach; ?>
+        </select>
+        <button type="button" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm" id="wpmm-scope-apply"
+                data-base-url="<?php echo esc_url( $base_url ); ?>">
+            <span class="dashicons dashicons-filter"></span> Apply
+        </button>
+        <?php if ( $current_id > 0 ) :
+            switch_to_blog( $current_id );
+            $active_name = get_bloginfo( 'name' );
+            restore_current_blog();
+        ?>
+        <span style="font-size:12px;color:#2563eb;font-weight:600;">
+            <span class="dashicons dashicons-admin-site" style="font-size:14px;vertical-align:middle;"></span>
+            Showing: <?php echo esc_html( $active_name ); ?>
+        </span>
+        <a href="<?php echo esc_url( $base_url ); ?>"
+           style="font-size:12px;color:#6b7280;">&times; All Sites</a>
+        <?php endif; ?>
+    </div>
+    <?php
+}
+
 // =========================================================================
 // SPAM LOG page
 // =========================================================================
 function wpmm_render_spam_log() {
     wpmm_cap_gate();
     global $wpdb;
+
+    $scoped_site_id = wpmm_get_scoped_site_id();
+    if ( wpmm_is_network_context() && $scoped_site_id > 0 ) {
+        switch_to_blog( $scoped_site_id );
+    }
+
+    // In Network Admin, scope bar selects which site's spam log to show.
+    $wpmm_scope_site_id = 0;
+    if ( wpmm_is_network_context() ) {
+        $wpmm_scope_site_id = absint( $_GET['site_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ( $wpmm_scope_site_id > 0 ) {
+            switch_to_blog( $wpmm_scope_site_id );
+        }
+    }
 
     $spam_table = $wpdb->prefix . 'wpmm_spam_log';
     $per_page   = 25;
@@ -340,8 +476,19 @@ function wpmm_render_spam_log() {
         "SELECT rule, COUNT(*) AS cnt FROM {$spam_table} GROUP BY rule ORDER BY cnt DESC" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     );
 
+    if ( wpmm_is_network_context() && $wpmm_scope_site_id > 0 ) {
+        restore_current_blog();
+    }
+
     $total_pages = $total > 0 ? (int) ceil( $total / $per_page ) : 1;
-    $page_url    = wpmm_subpage_url( WPMM_SLUG_SPAM );
+    $page_url    = add_query_arg(
+        $wpmm_scope_site_id > 0 ? [ 'site_id' => $wpmm_scope_site_id ] : [],
+        wpmm_subpage_url( WPMM_SLUG_SPAM )
+    );
+
+    if ( wpmm_is_network_context() && $scoped_site_id > 0 ) {
+        restore_current_blog();
+    }
 
     $rule_labels = [
         'honeypot'       => 'Honeypot',
@@ -366,6 +513,8 @@ function wpmm_render_spam_log() {
     <div class="wpmm-wrap">
         <?php wpmm_page_header( WPMM_SLUG_SPAM ); ?>
         <div class="wpmm-content">
+
+            <?php wpmm_site_scope_bar( WPMM_SLUG_SPAM ); ?>
 
             <!-- Stats summary -->
             <?php if ( $total > 0 ) : ?>
@@ -563,7 +712,7 @@ function wpmm_tip_card() {
             <span class="wpmm-tip-coffee">&#9749;</span>
             <div class="wpmm-tip-body">
                 <h2 class="wpmm-card-title" style="margin-bottom:6px;">
-                    Enjoying Site Maintenance Manager?
+                    Enjoying Greenskeeper?
                 </h2>
                 <p class="wpmm-tip-text">
                     If this plugin saves you time, consider buying the author a coffee &mdash;
@@ -729,9 +878,21 @@ function wpmm_render_dashboard() {
 // =========================================================================
 function wpmm_render_updates() {
     wpmm_cap_gate();
+
+    // Multisite scope — which site are we updating?
+    $scoped_site_id   = wpmm_get_scoped_site_id(); // 0 = All Sites (network), >0 = single site
+    $is_network_scope = wpmm_is_network_context() && $scoped_site_id === 0;
+
+    // Switch context to the scoped site for settings/admin reads.
+    if ( wpmm_is_network_context() && $scoped_site_id > 0 ) {
+        switch_to_blog( $scoped_site_id );
+    }
     $s            = wpmm_get_settings();
     $client_email = ! empty( $s['client_email'] ) ? $s['client_email'] : get_option( 'wpmm_client_email', '' );
     $default_admin = wpmm_get_default_admin();
+    if ( wpmm_is_network_context() && $scoped_site_id > 0 ) {
+        restore_current_blog();
+    }
 
     // All administrators for the per-session override selector
     $admins = get_users( [ 'role' => 'administrator', 'orderby' => 'display_name' ] );
@@ -739,6 +900,8 @@ function wpmm_render_updates() {
     <div class="wpmm-wrap">
         <?php wpmm_page_header( WPMM_SLUG_UPDATES ); ?>
         <div class="wpmm-content">
+
+            <?php wpmm_site_scope_bar( WPMM_SLUG_UPDATES ); ?>
 
             <!-- Client email / settings notice -->
             <?php if ( $client_email ) : ?>
@@ -845,6 +1008,27 @@ function wpmm_render_updates() {
                     </p>
                 </div>
             </div>
+
+            <?php if ( $is_network_scope ) : ?>
+            <div class="wpmm-notice wpmm-notice-info" style="margin-bottom:16px;">
+                <span class="dashicons dashicons-networking"></span>
+                <strong>Network scope:</strong> Showing all updates available across the network.
+                Plugins and themes activated on any site are included. Updates apply network-wide.
+            </div>
+            <?php elseif ( wpmm_is_network_context() && $scoped_site_id > 0 ) :
+                switch_to_blog( $scoped_site_id );
+                $scoped_name = get_bloginfo( 'name' );
+                restore_current_blog();
+            ?>
+            <div class="wpmm-notice wpmm-notice-info" style="margin-bottom:16px;">
+                <span class="dashicons dashicons-admin-site"></span>
+                <strong>Site scope:</strong> Showing updates for plugins and themes
+                activated on <strong><?php echo esc_html( $scoped_name ); ?></strong> only.
+            </div>
+            <?php endif; ?>
+
+            <!-- site_id passed to AJAX so JS can filter and log correctly -->
+            <input type="hidden" id="wpmm-scope-site-id" value="<?php echo absint( $scoped_site_id ); ?>">
 
             <!-- Action toolbar -->
             <div class="wpmm-toolbar">
@@ -1324,6 +1508,9 @@ function wpmm_render_log() {
 // =========================================================================
 function wpmm_render_email() {
     wpmm_cap_gate();
+    $wpmm_email_scope_id = wpmm_is_network_context()
+        ? absint( $_GET['site_id'] ?? 0 ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        : 0;
     global $wpdb;
 
     $saved_email  = get_option( 'wpmm_client_email', '' );
@@ -1335,6 +1522,8 @@ function wpmm_render_email() {
     <div class="wpmm-wrap">
         <?php wpmm_page_header( WPMM_SLUG_EMAIL ); ?>
         <div class="wpmm-content">
+            <?php wpmm_site_scope_bar( WPMM_SLUG_EMAIL ); ?>
+            <input type="hidden" id="wpmm-email-scope-site-id" value="<?php echo absint( $wpmm_email_scope_id ); ?>">
 
             <!-- Send form -->
             <div class="wpmm-card">
@@ -1437,7 +1626,7 @@ function wpmm_render_email() {
                     <textarea id="wpmm-update-notes"
                               class="wpmm-input"
                               rows="5"
-                              placeholder="e.g. Please note that Avada and its companion plugins were updated manually this week. These updates require license authentication through the Avada dashboard and cannot be applied automatically by Site Maintenance Manager&hellip;"
+                              placeholder="e.g. Please note that Avada and its companion plugins were updated manually this week. These updates require license authentication through the Avada dashboard and cannot be applied automatically by Greenskeeper&hellip;"
                               style="resize:vertical;line-height:1.6;"></textarea>
                     <p class="wpmm-hint">Plain text only. This note will appear at the bottom of the email above the footer.</p>
                 </div>
@@ -1449,7 +1638,7 @@ function wpmm_render_email() {
                     <span class="dashicons dashicons-plus-alt"></span> Additional Manual Updates
                 </h2>
                 <p class="wpmm-card-desc" style="margin-bottom:16px;">
-                    Plugins or themes updated manually outside the control of Site Maintenance Manager
+                    Plugins or themes updated manually outside the control of Greenskeeper
                     due to functional licensing issues that prevent this plugin from accessing the
                     specific panels where these plugins are located in the plugin or theme admin.
                     These entries will be included in the next email report sent above.

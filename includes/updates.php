@@ -5,10 +5,29 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  * Return available updates grouped by type.
  * Called ONCE per scan. Transients are seeded here and read by wpmm_do_update().
  */
-function wpmm_get_available_updates() {
+function wpmm_get_available_updates( $site_id = 0 ) {
 
     if ( ! function_exists( 'get_plugins' ) ) {
         require_once ABSPATH . 'wp-admin/includes/plugin.php';
+    }
+
+    // When scoped to a single site in multisite, get that site's active
+    // plugins and active theme so we can filter the results.
+    $active_plugins_for_site = null; // null = no filter (show all)
+    $active_theme_for_site   = null;
+    $switched                = false;
+
+    if ( is_multisite() && $site_id > 0 ) {
+        switch_to_blog( $site_id );
+        $switched = true;
+        // Site-level active plugins (not network-activated ones)
+        $site_plugins = (array) get_option( 'active_plugins', [] );
+        // Network-activated plugins are active on ALL sites
+        $network_plugins = array_keys( (array) get_site_option( 'active_sitewide_plugins', [] ) );
+        $active_plugins_for_site = array_unique( array_merge( $site_plugins, $network_plugins ) );
+        $active_theme_for_site   = get_option( 'stylesheet' ); // active theme slug
+        restore_current_blog();
+        $switched = false;
     }
 
     // Force a fresh check from the WordPress.org API.
@@ -16,7 +35,7 @@ function wpmm_get_available_updates() {
     wp_update_plugins();
     wp_update_themes();
 
-    $result = [ 'core' => [], 'plugins' => [], 'themes' => [] ];
+    $result = [ 'core' => [], 'plugins' => [], 'themes' => [], 'site_id' => $site_id ];
 
     // -- Core ------------------------------------------------------------------
     global $wp_version;
@@ -43,6 +62,10 @@ function wpmm_get_available_updates() {
             if ( strpos( $plugin_file, 'site-maintenance-manager' ) !== false ) {
                 continue;
             }
+            // When scoped to a specific site, only show plugins active on that site.
+            if ( $active_plugins_for_site !== null && ! in_array( $plugin_file, $active_plugins_for_site, true ) ) {
+                continue;
+            }
             $result['plugins'][] = [
                 'name'        => isset( $all_plugins[ $plugin_file ]['Name'] )    ? $all_plugins[ $plugin_file ]['Name']    : $plugin_file,
                 'slug'        => $plugin_file,
@@ -59,6 +82,10 @@ function wpmm_get_available_updates() {
     $update_themes = get_site_transient( 'update_themes' );
     if ( ! empty( $update_themes->response ) ) {
         foreach ( $update_themes->response as $theme_slug => $theme_data ) {
+            // When scoped to a specific site, only show the active theme.
+            if ( $active_theme_for_site !== null && $theme_slug !== $active_theme_for_site ) {
+                continue;
+            }
             $theme = wp_get_theme( $theme_slug );
             $result['themes'][] = [
                 'name'        => $theme->get( 'Name' ) ?: $theme_slug,
@@ -68,6 +95,30 @@ function wpmm_get_available_updates() {
                 'package'     => isset( $theme_data['package'] )     ? $theme_data['package']     : '',
             ];
         }
+    }
+
+    // Filter plugins/themes to those activated on the target site.
+    if ( is_multisite() && $site_id > 0 ) {
+        $active_plugins = get_option( 'active_plugins', [] );
+        $result['plugins'] = array_values( array_filter(
+            $result['plugins'],
+            function( $p ) use ( $active_plugins ) {
+                return in_array( $p['slug'], $active_plugins, true );
+            }
+        ) );
+
+        // Active theme for this site.
+        $active_theme_slug = get_stylesheet();
+        $result['themes'] = array_values( array_filter(
+            $result['themes'],
+            function( $t ) use ( $active_theme_slug ) {
+                return $t['slug'] === $active_theme_slug;
+            }
+        ) );
+    }
+
+    if ( $switched ) {
+        restore_current_blog();
     }
 
     return $result;

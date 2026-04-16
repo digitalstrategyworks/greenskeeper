@@ -24,14 +24,28 @@ function wpmm_ajax_run_update() {
     $slug       = sanitize_text_field( wp_unslash( $_POST['item_slug']  ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
     $session_id = sanitize_text_field( wp_unslash( $_POST['session_id'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
     $package    = esc_url_raw( wp_unslash( $_POST['package'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    $site_id    = absint( $_POST['site_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
     if ( ! $type || ! $slug ) {
         wp_send_json_error( 'Missing parameters.' );
     }
 
+    // Switch to the scoped site before running the update so the update
+    // runs in that site's context and logs to its own wpmm_update_log table.
+    $switched = false;
+    if ( is_multisite() && $site_id > 0 && $site_id !== get_current_blog_id() ) {
+        switch_to_blog( $site_id );
+        $switched = true;
+    }
+
     $GLOBALS['wpmm_session_id'] = $session_id;
 
     $result = wpmm_do_update( $type, $slug, $package );
+
+    if ( $switched ) {
+        restore_current_blog();
+    }
+
     wp_send_json_success( $result );
 }
 
@@ -108,6 +122,39 @@ function wpmm_ajax_send_email() {
     $body   = wpmm_build_email_body( $log_entries, $admin_id, $manual_entries, $update_note );
     $result = wpmm_send_email( $to, $subject, $body, $admin_id );
 
+    // ── All-Sites network email mode ──────────────────────────────────────────
+    $network_all = ( isset( $_POST['network_all'] ) && (int) $_POST['network_all'] === 1 ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    if ( is_multisite() && $network_all ) {
+        // Gather log entries from every site that had a session recently.
+        $sites      = get_sites( [ 'number' => 200, 'fields' => 'ids' ] );
+        $sites_data = [];
+        foreach ( $sites as $bid ) {
+            switch_to_blog( $bid );
+            $site_entries = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+                $session_id
+                    ? $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}wpmm_update_log WHERE session_id = %s ORDER BY updated_at ASC", $session_id )
+                    : "SELECT * FROM {$wpdb->prefix}wpmm_update_log ORDER BY updated_at DESC LIMIT 50" // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            );
+            if ( ! empty( $site_entries ) ) {
+                $sites_data[] = [
+                    'blog_id'   => $bid,
+                    'site_name' => get_bloginfo( 'name' ),
+                    'site_url'  => get_bloginfo( 'url' ),
+                    'entries'   => $site_entries,
+                ];
+            }
+            restore_current_blog();
+        }
+        $body   = wpmm_build_network_email_body( $sites_data, $admin_id, $update_note );
+        $result = wpmm_send_email( $to, $subject, $body, $admin_id );
+        if ( $result['success'] ) {
+            wp_send_json_success( [ 'message' => 'Network report sent successfully.', 'email_id' => $result['email_id'] ] );
+        } else {
+            wp_send_json_error( 'Network email failed to send.' );
+        }
+        return;
+    }
+
     if ( $result['success'] ) {
         wp_send_json_success( [ 'message' => 'Email sent successfully.', 'email_id' => $result['email_id'] ] );
     } else {
@@ -155,7 +202,8 @@ function wpmm_ajax_resend_email() {
 // ── Retrieve available updates ────────────────────────────────────────────────
 function wpmm_ajax_get_updates() {
     wpmm_ajax_cap_check();
-    $updates = wpmm_get_available_updates();
+    $site_id = absint( $_POST['site_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified via wpmm_ajax_cap_check().
+    $updates = wpmm_get_available_updates( $site_id );
     wp_send_json_success( $updates );
 }
 

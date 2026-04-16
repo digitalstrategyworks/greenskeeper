@@ -1,17 +1,17 @@
 <?php
 /**
- * Plugin Name: Site Maintenance Manager
- * Description: Manage WordPress core, plugin, and theme updates with email reporting. Supports single-site and Multisite (network) installs.
- * Version:     1.8.0
+ * Plugin Name: Greenskeeper
+ * Description: Manage WordPress updates, filter comment spam, send branded email reports, and configure SMTP delivery — all from one dashboard. Supports single-site and Multisite.
+ * Version:     1.9.0
  * Author:      Tony Zeoli
  * Author URI:  https://digitalstrategyworks.com
  * License:     GPL-2.0+
- * Text Domain: site-maintenance-manager
+ * Text Domain: greenskeeper
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'WPMM_VERSION',    '1.8.0' );
+define( 'WPMM_VERSION',    '1.9.0' );
 define( 'WPMM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPMM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -169,7 +169,7 @@ function wpmm_two_factor_notice() {
         return;
     }
     echo '<div class="notice notice-warning is-dismissible" id="wpmm-2fa-notice">'
-       . '<p><strong>Site Maintenance Manager:</strong> No two-factor authentication plugin detected. '
+       . '<p><strong>Greenskeeper:</strong> No two-factor authentication plugin detected. '
        . 'We recommend installing <a href="' . esc_url( admin_url( 'plugin-install.php?s=wp-2fa&tab=search&type=term' ) ) . '" target="_blank">WP 2FA</a> '
        . 'or <a href="' . esc_url( admin_url( 'plugin-install.php?s=two-factor&tab=search&type=term' ) ) . '" target="_blank">Two Factor</a> '
        . 'to protect the administrator account that manages this plugin. '

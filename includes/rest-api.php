@@ -1,6 +1,6 @@
 <?php
 /**
- * REST API — Site Maintenance Manager spoke endpoints.
+ * REST API — Greenskeeper spoke endpoints.
  *
  * Registers a set of REST API endpoints under the smm/v1 namespace so that
  * a remote hub site (e.g. an agency dashboard) can manage this site's
@@ -151,7 +151,7 @@ function wpmm_rest_auth( WP_REST_Request $request ) {
     if ( empty( $stored_key ) ) {
         return new WP_Error(
             'smm_api_disabled',
-            'Remote API access is not enabled. Generate an API key in Site Maintenance Manager → Settings.',
+            'Remote API access is not enabled. Generate an API key in Greenskeeper → Settings.',
             [ 'status' => 401 ]
         );
     }
