@@ -17,36 +17,84 @@
 /* ── Layout ──────────────────────────────────────────────────────────────── */
 .wpmm-wrap { font-family: 'Georgia', serif; max-width: 1100px; }
 
+/* ── Header ──────────────────────────────────────────────────────────────── */
 .wpmm-header {
     background: var(--wpmm-blue);
     color: #fff;
-    padding: 20px 28px;
+    padding: 14px 28px 12px;
     border-radius: var(--wpmm-radius) var(--wpmm-radius) 0 0;
-    display: flex;
-    align-items: center;
     margin-bottom: 0;
+    display: flex;
+    flex-direction: column;   /* vertical stack — rows top to bottom */
+    gap: 0;
 }
-.wpmm-header-brand {
+
+/* Each row is its own horizontal flex line */
+.wpmm-header-row {
     display: flex;
     align-items: center;
+    width: 100%;
+}
+
+/* Row 1: Greenskeeper product logo left, site info right */
+.wpmm-header-row-primary {
     gap: 14px;
+    padding-bottom: 10px;
 }
-.wpmm-header-brand .dashicons {
-    font-size: 36px;
-    width: 36px;
-    height: 36px;
+.wpmm-header-product-logo {
+    height: 30px;           /* product logo height — prominent but not giant */
+    width: auto;
+    display: block;
+    flex-shrink: 0;
+    /* transparent PNG — no filter or invert needed */
+}
+
+/* Site name / URL pushed to far right of row 1 */
+.wpmm-header-site {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
     color: #93c5fd;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
-.wpmm-header h1 {
-    color: #fff;
-    margin: 0;
-    font-size: 20px;
-    font-family: Georgia, serif;
+.wpmm-header-site-sep { color: rgba(147,197,253,.4); }
+.wpmm-header-site-url { color: rgba(147,197,253,.75); }
+
+/* Row 2: Agency branding — secondary, below a subtle divider line */
+.wpmm-header-row-secondary {
+    gap: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,.15);
 }
-.wpmm-header p {
-    margin: 4px 0 0;
-    font-size: 13px;
-    color: #93c5fd;
+.wpmm-header-agency-logo {
+    height: 20px;           /* strict 20px cap — always small and secondary */
+    width: auto;
+    max-width: 72px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+.wpmm-header-agency-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,.65);
+    white-space: nowrap;
+}
+
+/* Legacy stubs — these classes no longer render HTML but kept so
+   any external CSS overrides do not error */
+.wpmm-header-brand { display: contents; }
+.wpmm-header h1    { display: none; }
+.wpmm-header p     { display: none; }
+.wpmm-header-logo  {
+    height: 20px;
+    max-width: 72px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
 }
 
 /* ── Tabs ─────────────────────────────────────────────────────────────────── */
@@ -715,19 +763,6 @@
 }
 .wpmm-modal-iframe.wpmm-hidden { display: none !important; }
 
-
-/* ════════════════════════════════════════════════════════════════════════════
-   HEADER — logo support  (v1.3.0)
-   ════════════════════════════════════════════════════════════════════════════ */
-
-.wpmm-header-logo {
-    max-height: 44px;
-    max-width: 160px;
-    object-fit: contain;
-    /* Make any colour logo readable on the dark header */
-    filter: brightness(0) invert(1);
-    flex-shrink: 0;
-}
 
 /* ════════════════════════════════════════════════════════════════════════════
    DASHBOARD SUMMARY CARDS  (v1.3.0)

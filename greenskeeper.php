@@ -7,6 +7,16 @@
  * Author URI:  https://digitalstrategyworks.com
  * License:     GPL-2.0+
  * Text Domain: greenskeeper
+ *
+ * Plugin code is licensed under GPL-2.0+ (see License URI above).
+ * Documentation, written content, FAQs, setup guides, and all non-code
+ * creative content © 2026 Digital Strategy Works LLC. All rights reserved.
+ * Unauthorised reproduction of the documentation or written content is
+ * prohibited outside the terms of the GPL as it applies to software.
+ *
+ * @package Greenskeeper
+ * @author  Tony Zeoli <tony@digitalstrategyworks.com>
+ * @link    https://digitalstrategyworks.com
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;

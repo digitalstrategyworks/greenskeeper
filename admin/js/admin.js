@@ -1566,24 +1566,51 @@ jQuery(function ($) {
     // SITE SCOPE BAR (Network Admin — Updates, Spam Log, Settings)
     // =========================================================================
     (function () {
-        if ( !$('#wpmm-site-scope-select').length ) return;
+        // The select renders with id="wpmm-site-scope" — guard and read use that ID.
+        if ( !$('#wpmm-site-scope').length ) return;
 
         $(document).on('click', '#wpmm-scope-apply', function () {
-            var siteId = $('#wpmm-site-scope-select').val();
-            var url    = new URL( window.location.href );
+            var $btn   = $(this);
+            var siteId = $('#wpmm-site-scope').val();
+
+            // Use the base URL stored in data-base-url on the button, which
+            // wpmm_site_scope_bar() sets to the correct admin page URL without
+            // any existing query args. Fall back to window.location if missing.
+            var baseUrl = $btn.data('base-url') || window.location.href.split('?')[0];
+            var url     = new URL( baseUrl, window.location.origin );
+
+            // Preserve existing non-scope params (paged, rule, ip etc.)
+            var existing = new URL( window.location.href );
+            existing.searchParams.forEach( function( val, key ) {
+                if ( key !== 'site_id' && key !== 'paged' ) {
+                    url.searchParams.set( key, val );
+                }
+            });
+
             if ( siteId && siteId !== '0' ) {
-                url.searchParams.set('site_id', siteId);
+                url.searchParams.set( 'site_id', siteId );
             } else {
-                url.searchParams.delete('site_id');
+                url.searchParams.delete( 'site_id' );
             }
-            // Remove paged param when changing scope
-            url.searchParams.delete('paged');
+
+            $btn.prop( 'disabled', true )
+                .html( '<span class="dashicons dashicons-update wpmm-spin"></span> Loading&hellip;' );
+
             window.location.href = url.toString();
         });
 
         // Also trigger on Enter key in select
-        $(document).on('keydown', '#wpmm-site-scope-select', function(e) {
+        $(document).on('keydown', '#wpmm-site-scope', function(e) {
             if (e.key === 'Enter') { $('#wpmm-scope-apply').trigger('click'); }
+        });
+
+        // Live feedback — change the select updates the button label
+        $(document).on('change', '#wpmm-site-scope', function () {
+            var val  = $(this).val();
+            var text = val && val !== '0' ? 'Apply' : 'All Sites';
+            $('#wpmm-scope-apply').html(
+                '<span class="dashicons dashicons-filter"></span> ' + text
+            );
         });
     })();
 

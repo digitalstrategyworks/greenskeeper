@@ -9,6 +9,7 @@ Requires PHP:      8.0
 Stable tag:        1.9.0
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+Copyright:         2026 Digital Strategy Works LLC
 
 Manage WordPress updates across single sites or full Multisite networks, filter comment spam, send branded email reports, and configure SMTP delivery. Single-site and Multisite.
 
@@ -476,6 +477,29 @@ The App Password method above works identically for Workspace accounts. Alternat
 8. **Settings — SMTP & Email Delivery** — Provider tile grid with context-sensitive setup instructions and Send Test Email feature.
 9. **Email Preview Modal** — Full rendered HTML email preview inside the WordPress admin.
 10. **Database Diagnostic** — Expandable panel showing table columns, row counts, and Force DB Upgrade button.
+
+== Copyright ==
+
+Greenskeeper is copyright 2026 Digital Strategy Works LLC.
+
+**Plugin code** is licensed under the GNU General Public License v2.0 or later
+(GPL-2.0+). You are free to use, modify, and redistribute the plugin code under
+the terms of that licence. A copy of the GPL is included in the plugin package
+and is available at https://www.gnu.org/licenses/gpl-2.0.html.
+
+**Documentation and written content** — including but not limited to the plugin
+description, installation and usage guides, SMTP setup guides, FAQs, and all
+other original prose contained in readme.txt, README.md, and within the plugin's
+admin interface — is the intellectual property of Digital Strategy Works LLC and
+is protected by copyright. Reproduction or redistribution of the documentation
+outside the terms of the GPL as it applies to software is prohibited without
+prior written permission from Digital Strategy Works LLC.
+
+Greenskeeper, the Greenskeeper logo, and the golf-flag mark are trademarks of
+Digital Strategy Works LLC. Unauthorised use of the Greenskeeper name or visual
+identity in a manner that implies endorsement or affiliation is prohibited.
+
+For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
 

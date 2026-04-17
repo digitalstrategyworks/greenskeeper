@@ -732,62 +732,7 @@ function wpmm_render_settings() {
                 </table>
                 <p class="wpmm-hint">Select a site from the scope bar above to configure its spam settings.</p>
                 <?php else : ?>
-
-                <?php
-                // In Network Admin: show scope bar and load settings for the selected site.
-                $wpmm_spam_scope_id = 0;
-                if ( wpmm_is_network_context() ) :
-                    $wpmm_spam_scope_id = absint( $_GET['site_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-                    if ( $wpmm_spam_scope_id > 0 ) {
-                        switch_to_blog( $wpmm_spam_scope_id );
-                        // Re-read settings from the selected sub-site.
-                        $s_site            = wpmm_get_settings();
-                        $spam_enabled      = ! empty( $s_site['spam_filter_enabled'] );
-                        $comments_disabled = ! empty( $s_site['comments_disabled'] );
-                        $spam_min_time     = absint( $s_site['spam_min_time']  ?? 5 );
-                        $spam_max_links    = absint( $s_site['spam_max_links'] ?? 3 );
-                        $spam_keywords     = $s_site['spam_keywords']     ?? '';
-                        $spam_ip_blocklist = $s_site['spam_ip_blocklist'] ?? '';
-                        $akismet_key       = $s_site['akismet_key']       ?? '';
-                        $akismet_active    = defined( 'AKISMET_VERSION' );
-                        restore_current_blog();
-                    }
-                    // Show the scope bar
-                    wpmm_site_scope_bar( WPMM_SLUG_SETTINGS );
-                    // If no site selected yet, show summary table instead of form
-                    if ( $wpmm_spam_scope_id === 0 ) :
-                ?>
-                <div class="wpmm-notice wpmm-notice-info" style="margin-bottom:16px;">
-                    <span class="dashicons dashicons-info-outline"></span>
-                    Select a site above to view and edit its spam filter settings.
-                    <?php
-                    // Render a quick summary table of all sites
-                    $all_sites = get_sites( [ 'number' => 200 ] );
-                    echo '<table class="wpmm-table" style="margin-top:12px;">';
-                    echo '<thead><tr><th>Site</th><th>Spam Filter</th><th>Akismet</th><th>Comments</th></tr></thead><tbody>';
-                    foreach ( $all_sites as $_site ) {
-                        switch_to_blog( $_site->blog_id );
-                        $_s    = wpmm_get_settings();
-                        $_spam = ! empty( $_s['spam_filter_enabled'] );
-                        $_akis = ! empty( $_s['akismet_key'] );
-                        $_comm = ! empty( $_s['comments_disabled'] );
-                        $_url  = add_query_arg( [ 'site_id' => $_site->blog_id ], wpmm_subpage_url( WPMM_SLUG_SETTINGS ) ) . '#wpmm-spam-card';
-                        restore_current_blog();
-                        echo '<tr>';
-                        echo '<td><a href="' . esc_url( $_url ) . '">' . esc_html( $_site->blogname ?: $_site->domain ) . '</a></td>';
-                        echo '<td>' . ( $_spam ? '<span class="wpmm-badge wpmm-badge-success">Enabled</span>' : '<span class="wpmm-badge">Disabled</span>' ) . '</td>';
-                        echo '<td>' . ( $_akis ? '<span class="wpmm-badge wpmm-badge-success">Connected</span>' : '<span class="wpmm-badge">Not set</span>' ) . '</td>';
-                        echo '<td>' . ( $_comm ? '<span class="wpmm-badge wpmm-badge-error">Disabled</span>' : '<span class="wpmm-badge wpmm-badge-success">Enabled</span>' ) . '</td>';
-                        echo '</tr>';
-                    }
-                    echo '</tbody></table>';
-                    ?>
-                </div>
-                <?php endif; // $wpmm_spam_scope_id === 0 ?>
-                <?php endif; // wpmm_is_network_context ?>
-
-                <?php if ( ! wpmm_is_network_context() || $wpmm_spam_scope_id > 0 ) : ?>
-                <input type="hidden" id="wpmm-spam-site-id" value="<?php echo absint( $wpmm_spam_scope_id ?? 0 ); ?>">
+                <!-- Single-site admin, or Network Admin with a specific site selected -->
 
                 <!-- Disable comments toggle -->
                 <div class="wpmm-settings-group">
@@ -933,7 +878,7 @@ function wpmm_render_settings() {
                 <!-- Save button (only shown when editing a specific site or on per-site admin) -->
                 <?php if ( ! wpmm_is_network_context() || $scoped_site_id > 0 ) : ?>
                 <div class="wpmm-toolbar" style="margin-top:20px;">
-                    <input type="hidden" id="wpmm-spam-scope-site-id" value="<?php echo absint( $spam_site_id ); ?>">
+                    <input type="hidden" id="wpmm-spam-scope-site-id" value="<?php echo absint( $scoped_site_id ); ?>">
                     <button type="button" class="wpmm-btn wpmm-btn-primary" id="wpmm-save-spam-btn">
                         <span class="dashicons dashicons-yes"></span> Save Spam Settings
                     </button>

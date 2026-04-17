@@ -59,7 +59,7 @@ function wpmm_get_available_updates( $site_id = 0 ) {
     $all_plugins    = get_plugins();
     if ( ! empty( $update_plugins->response ) ) {
         foreach ( $update_plugins->response as $plugin_file => $plugin_data ) {
-            if ( strpos( $plugin_file, 'site-maintenance-manager' ) !== false ) {
+            if ( strpos( $plugin_file, 'greenskeeper' ) !== false ) {
                 continue;
             }
             // When scoped to a specific site, only show plugins active on that site.

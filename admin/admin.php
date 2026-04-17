@@ -218,24 +218,41 @@ function wpmm_page_header( $active_slug ) {
     $wpmm_logo     = ! empty( $wpmm_s['logo_url'] )     ? $wpmm_s['logo_url']     : '';
     $wpmm_company  = ! empty( $wpmm_s['company_name'] ) ? $wpmm_s['company_name'] : '';
     ?>
-    <div class="wpmm-header">
-        <div class="wpmm-header-brand">
-            <?php if ( $wpmm_logo ) : ?>
-                <img src="<?php echo esc_url( $wpmm_logo ); ?>" alt="<?php echo esc_attr( $wpmm_company ?: 'Logo' ); ?>" class="wpmm-header-logo">
-            <?php else : ?>
-                <span class="dashicons dashicons-shield-alt"></span>
-            <?php endif; ?>
-            <div>
-                <h1>Greenskeeper<?php echo $wpmm_company ? ' &mdash; ' . esc_html( $wpmm_company ) : ''; ?></h1>
-                <p>
-                    <?php echo esc_html( get_bloginfo( 'name' ) ); ?> &mdash;
-                    <?php echo esc_url( get_bloginfo( 'url' ) ); ?>
-                    <?php if ( wpmm_is_network_context() ) : ?>
-                        <span class="wpmm-badge wpmm-badge-network" style="margin-left:10px;">Network Admin</span>
-                    <?php endif; ?>
-                </p>
+    <div class="wpmm-header" style="display:flex;flex-direction:column;gap:0;">
+
+        <!-- Row 1: Greenskeeper product logo left, site name/URL right -->
+        <div class="wpmm-header-row wpmm-header-row-primary"
+             style="display:flex;flex-direction:row;align-items:center;width:100%;gap:14px;padding-bottom:10px;">
+            <img src="<?php echo esc_url( WPMM_PLUGIN_URL . 'admin/images/greenskeeper-logo.png?v=' . WPMM_VERSION ); ?>"
+                 alt="Greenskeeper"
+                 width="140" height="42"
+                 style="height:42px;width:auto;max-width:200px;display:block;flex-shrink:0;">
+            <div style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:12px;color:#93c5fd;flex-wrap:wrap;justify-content:flex-end;">
+                <span><?php echo esc_html( get_bloginfo( 'name' ) ); ?></span>
+                <span style="color:rgba(147,197,253,.4);">&mdash;</span>
+                <span style="color:rgba(147,197,253,.75);"><?php echo esc_url( get_bloginfo( 'url' ) ); ?></span>
+                <?php if ( wpmm_is_network_context() ) : ?>
+                    <span class="wpmm-badge wpmm-badge-network" style="margin-left:8px;">Network Admin</span>
+                <?php endif; ?>
             </div>
         </div>
+
+        <!-- Row 2: Agency logo + company name — secondary, only when configured -->
+        <?php if ( $wpmm_logo || $wpmm_company ) : ?>
+        <div class="wpmm-header-row wpmm-header-row-secondary"
+             style="display:flex;flex-direction:row;align-items:center;width:100%;gap:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.2);">
+            <span style="font-size:11px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.06em;margin-right:4px;">Managed by</span>
+            <?php if ( $wpmm_logo ) : ?>
+                <img src="<?php echo esc_url( $wpmm_logo ); ?>"
+                     alt="<?php echo esc_attr( $wpmm_company ?: 'Agency Logo' ); ?>"
+                     style="height:18px;width:auto;max-width:64px;object-fit:contain;filter:brightness(0) invert(1);opacity:.8;flex-shrink:0;display:block;">
+            <?php endif; ?>
+            <?php if ( $wpmm_company ) : ?>
+                <span style="font-size:12px;font-weight:600;color:rgba(255,255,255,.7);white-space:nowrap;"><?php echo esc_html( $wpmm_company ); ?></span>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
     </div>
     <nav class="wpmm-tabs">
         <?php foreach ( $links as $slug => $info ) : ?>
@@ -249,57 +266,6 @@ function wpmm_page_header( $active_slug ) {
     <?php
 }
 
-
-// =========================================================================
-// SITE SCOPE BAR — renders in Network Admin on Updates, Spam Log, Settings
-// Returns the currently-selected site_id (0 = All Sites)
-// =========================================================================
-function wpmm_site_scope_bar( $current_page_slug ) {
-    if ( ! wpmm_is_network_context() ) {
-        return 0; // Not in Network Admin — no bar, no switching
-    }
-
-    $sites   = get_sites( [ 'number' => 200, 'orderby' => 'blogname', 'order' => 'ASC' ] );
-    $site_id = absint( $_GET['site_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-    $page_url = wpmm_subpage_url( $current_page_slug );
-    ?>
-    <div class="wpmm-card wpmm-scope-bar" style="margin-bottom:16px;padding:14px 20px;">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-            <span class="dashicons dashicons-networking" style="color:var(--wpmm-blue);font-size:18px;flex-shrink:0;"></span>
-            <strong style="font-size:13px;color:var(--wpmm-dark);white-space:nowrap;">Network Scope:</strong>
-            <select id="wpmm-site-scope-select" class="wpmm-input" style="max-width:280px;">
-                <option value="0" <?php selected( $site_id, 0 ); ?>>&#8212; All Sites</option>
-                <?php foreach ( $sites as $site ) : ?>
-                    <option value="<?php echo absint( $site->blog_id ); ?>"
-                        <?php selected( $site_id, $site->blog_id ); ?>>
-                        <?php echo esc_html( $site->blogname ?: $site->domain ); ?>
-                        &mdash; <?php echo esc_html( $site->domain . $site->path ); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <button type="button" class="wpmm-btn wpmm-btn-primary wpmm-btn-sm" id="wpmm-scope-apply">
-                <span class="dashicons dashicons-filter"></span> Apply
-            </button>
-            <?php if ( $site_id > 0 ) :
-                $current_site = get_site( $site_id );
-                $site_label   = $current_site ? esc_html( $current_site->blogname ?: $current_site->domain ) : '#' . $site_id;
-            ?>
-                <span class="wpmm-badge wpmm-badge-success" style="font-size:11px;">
-                    Viewing: <?php echo $site_label; // Already escaped above ?>
-                </span>
-                <a href="<?php echo esc_url( $page_url ); ?>"
-                   class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm"
-                   style="font-size:12px;">&times; All Sites</a>
-            <?php else : ?>
-                <span class="wpmm-badge" style="font-size:11px;background:#f1f5f9;color:#64748b;">
-                    All Sites
-                </span>
-            <?php endif; ?>
-        </div>
-    </div>
-    <?php
-    return $site_id;
-}
 
 // =========================================================================
 // Capability gate (shared by all renderers)
@@ -415,18 +381,10 @@ function wpmm_render_spam_log() {
     wpmm_cap_gate();
     global $wpdb;
 
-    $scoped_site_id = wpmm_get_scoped_site_id();
-    if ( wpmm_is_network_context() && $scoped_site_id > 0 ) {
-        switch_to_blog( $scoped_site_id );
-    }
-
     // In Network Admin, scope bar selects which site's spam log to show.
-    $wpmm_scope_site_id = 0;
-    if ( wpmm_is_network_context() ) {
-        $wpmm_scope_site_id = absint( $_GET['site_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if ( $wpmm_scope_site_id > 0 ) {
-            switch_to_blog( $wpmm_scope_site_id );
-        }
+    $wpmm_scope_site_id = wpmm_get_scoped_site_id();
+    if ( wpmm_is_network_context() && $wpmm_scope_site_id > 0 ) {
+        switch_to_blog( $wpmm_scope_site_id );
     }
 
     $spam_table = $wpdb->prefix . 'wpmm_spam_log';
@@ -485,10 +443,6 @@ function wpmm_render_spam_log() {
         $wpmm_scope_site_id > 0 ? [ 'site_id' => $wpmm_scope_site_id ] : [],
         wpmm_subpage_url( WPMM_SLUG_SPAM )
     );
-
-    if ( wpmm_is_network_context() && $scoped_site_id > 0 ) {
-        restore_current_blog();
-    }
 
     $rule_labels = [
         'honeypot'       => 'Honeypot',

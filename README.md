@@ -3,12 +3,12 @@
 **Version:** 1.9.0  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
+**Copyright:** © 2026 Digital Strategy Works LLC  
 **Requires WordPress:** 5.8+  
 **Requires PHP:** 8.0+  
 **Tested up to:** WordPress 6.9
 
 A professional WordPress maintenance plugin for developers and agencies — named after the greenskeeper who maintains the golf course to an exacting standard so players never think about what's underneath. Manage core, plugin, and theme updates, filter comment spam, send branded HTML email reports, and configure SMTP delivery — all from one dashboard. Full Multisite support with per-site scope selection.
-
 
 ---
 
@@ -674,6 +674,18 @@ This happens for emails sent before version 1.4.1 when the template had an inter
 
 **Can I customise the email template?**
 The email template is defined in `includes/email.php`. It uses inline styles for email client compatibility. The header automatically reflects your configured logo, company name, and administrator. For deeper customisation, fork the file and modify `wpmm_build_email_body()`.
+
+---
+
+## Copyright & Licensing
+
+**Plugin code** is licensed under the [GNU General Public License v2.0 or later (GPL-2.0+)](https://www.gnu.org/licenses/gpl-2.0.html). You are free to use, modify, and redistribute the plugin code under the terms of that licence.
+
+**Documentation and written content** — including the plugin description, installation and usage guides, SMTP setup guides, FAQs, and all other original prose in readme.txt, README.md, and within the plugin's admin interface — is © 2026 Digital Strategy Works LLC. All rights reserved. Reproduction or redistribution of the documentation outside the terms of the GPL as it applies to software is prohibited without prior written permission.
+
+**Greenskeeper**, the Greenskeeper logo, and the golf-flag mark are trademarks of Digital Strategy Works LLC. Unauthorised use of the Greenskeeper name or visual identity in a manner that implies endorsement or affiliation is prohibited.
+
+For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstrategyworks.com)
 
 ---
 
