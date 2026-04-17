@@ -9,6 +9,7 @@
 
 A professional WordPress maintenance plugin for developers and agencies — named after the greenskeeper who maintains the golf course to an exacting standard so players never think about what's underneath. Manage core, plugin, and theme updates, filter comment spam, send branded HTML email reports, and configure SMTP delivery — all from one dashboard. Full Multisite support with per-site scope selection.
 
+
 ---
 
 ## Table of Contents
