@@ -465,8 +465,17 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
 /**
  * Shared result interpreter for Plugin_Upgrader.
  * Returns [ $status, $new_version, $error_code, $message ].
+ *
+ * When $result is null the upgrader ran but wrote nothing to disk. This
+ * most commonly means the package URL was a redirect whose final signed
+ * destination had expired — the download silently failed. We force a fresh
+ * wp_update_plugins() to get a new URL from the vendor and retry once.
+ * This handles AIOSEO Pro, WPForms, and other plugins whose update servers
+ * return HTTP 200 on the initial URL even when the signed download link
+ * behind it has already expired, so the HEAD pre-check passes but the
+ * actual download then gets a 403 or empty response.
  */
-function wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version ) {
+function wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version, $retry = true ) {
     if ( $result === true ) {
         clearstatcache();
         $plugins     = get_plugins();
@@ -475,13 +484,35 @@ function wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version ) {
     }
 
     if ( is_null( $result ) ) {
-        // Upgrader ran but found nothing to do — check installed version.
+        // Upgrader ran but nothing was written to disk.
+        // First check: maybe it actually succeeded (e.g. another process
+        // in the same batch already updated it).
         clearstatcache();
         $plugins = get_plugins();
         $ver_now = isset( $plugins[ $slug ]['Version'] ) ? $plugins[ $slug ]['Version'] : $old_version;
         if ( version_compare( $ver_now, $old_version, '>' ) ) {
             return [ 'success', $ver_now, '', 'Updated successfully (confirmed via version comparison).' ];
         }
+
+        // Version unchanged. The most common cause is a signed package URL
+        // that expired between our HEAD check and the actual download.
+        // Force a fresh update check to get a new URL and retry once.
+        if ( $retry ) {
+            require_once ABSPATH . 'wp-admin/includes/update.php';
+            delete_site_transient( 'update_plugins' );
+            wp_update_plugins();
+
+            $update_plugins = get_site_transient( 'update_plugins' );
+            if ( ! empty( $update_plugins->response[ $slug ]->package ) ) {
+                $fresh_pkg = $update_plugins->response[ $slug ]->package;
+                $skin2     = new WP_Ajax_Upgrader_Skin();
+                $upgrader2 = new Plugin_Upgrader( $skin2 );
+                $result2   = $upgrader2->upgrade( $slug );
+                // Recurse with $retry = false so we never loop more than once.
+                return wpmm_interpret_plugin_result( $result2, $skin2, $slug, $old_version, false );
+            }
+        }
+
         $code = 'wpmm_version_unchanged';
         return [ 'failed', '', $code, wpmm_explain_error( $code )['detail'] ];
     }

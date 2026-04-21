@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        1.9.7
+Stable tag:        1.9.8
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,18 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 1.9.8 =
+* Fix: All In One SEO Pro (and similar plugins) was reporting "version
+  unchanged" after an update attempt even when no error was returned.
+  Root cause: some premium plugin update servers return HTTP 200 on the
+  initial package URL even when the signed download link behind it has
+  already expired, so the HEAD pre-check passed but the actual download
+  silently failed, causing Plugin_Upgrader to return null. Fix: when
+  the upgrader returns null and the version has not advanced, Greenskeeper
+  now forces a fresh wp_update_plugins() check to obtain a new signed URL
+  from the vendor's server, then retries the upgrade once automatically.
+  The retry is bounded to one attempt to prevent loops.
 
 = 1.9.7 =
 * Critical fix (improved): Premium plugin updates now work correctly

@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 1.9.7  
+**Version:** 1.9.8  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -704,6 +704,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ---
 
 ## Changelog
+
+### 1.9.8
+- Fix: AIOSEO Pro / premium plugins reporting "version unchanged" — auto-retry with fresh signed URL when upgrader returns null
 
 ### 1.9.7
 - **Critical fix (improved):** Premium plugins (Gravity Forms, ACF, Sucuri, Divi) now update correctly — stale package URLs trigger a fresh `wp_update_plugins()` check before the upgrade proceeds
