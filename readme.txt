@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        1.9.9
+Stable tag:        2.0.1
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,36 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.0.1 =
+* Fix: Jetpack and other plugins that fail with a filesystem "Could not
+  copy file" error now report the correct error (File Copy Failed) with
+  a clear explanation, rather than the misleading "version unchanged"
+  message. WordPress downloads these plugins successfully but the skin
+  error was not being surfaced — it is now checked before the generic
+  fallback.
+* Fix: Gravity Forms add-ons (and any plugin whose vendor withholds the
+  package URL until a browser-based license check passes) are now shown
+  with a "Manual update required" warning instead of an Update button
+  that would always fail. Their checkboxes are disabled so they cannot
+  be included in batch updates. Users are directed to Dashboard > Updates
+  or the plugin's own settings page.
+* Fix: Plugins with empty package URLs are now flagged as
+  requires_manual in the scan response so the UI can handle them
+  correctly.
+
+= 2.0.0 =
+* Fix: Premium plugins with signed, time-limited package URLs (AIOSEO Pro,
+  WPForms, and similar) now update reliably. When Plugin_Upgrader returns
+  null after a silent download failure, Greenskeeper forces a fresh
+  wp_update_plugins() check to obtain a new signed URL from the vendor's
+  server and retries the upgrade automatically. The retry is bounded to
+  one attempt. Confirmed working with All In One SEO Pro.
+* Fix: Added opcache_reset() and wp_clean_plugins_cache() before reading
+  the updated plugin version to prevent stale opcode cache from reporting
+  the wrong version number after a successful upgrade.
+* Removed diagnostic debug output added in v1.9.9 — root cause confirmed,
+  clean fix implemented.
 
 = 1.9.9 =
 * Diagnostic build: adds detailed debug output to the failed update

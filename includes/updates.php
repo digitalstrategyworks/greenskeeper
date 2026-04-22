@@ -66,6 +66,8 @@ function wpmm_get_available_updates( $site_id = 0 ) {
             if ( $active_plugins_for_site !== null && ! in_array( $plugin_file, $active_plugins_for_site, true ) ) {
                 continue;
             }
+            $pkg = isset( $plugin_data->package ) ? $plugin_data->package : '';
+
             $result['plugins'][] = [
                 'name'        => isset( $all_plugins[ $plugin_file ]['Name'] )    ? $all_plugins[ $plugin_file ]['Name']    : $plugin_file,
                 'slug'        => $plugin_file,
@@ -73,7 +75,11 @@ function wpmm_get_available_updates( $site_id = 0 ) {
                 'new_version' => isset( $plugin_data->new_version )               ? $plugin_data->new_version               : '',
                 // package URL stored so the upgrader can use it directly if the
                 // transient has been cleared by the time the update AJAX call fires.
-                'package'     => isset( $plugin_data->package )                   ? $plugin_data->package                   : '',
+                'package'     => $pkg,
+                // Flag plugins whose vendor withholds the package URL until a
+                // browser-based license check passes (e.g. Gravity Forms add-ons).
+                // These cannot be updated via AJAX and need manual intervention.
+                'requires_manual' => ( $pkg === '' ),
             ];
         }
     }
@@ -475,7 +481,7 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
  * behind it has already expired, so the HEAD pre-check passes but the
  * actual download then gets a 403 or empty response.
  */
-function wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version, $retry = true ) {
+function wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version, $retry = true, $retried = false ) {
     if ( $result === true ) {
         // Flush all caches before reading the new version — opcode cache
         // (OPcache/APCu) can cause get_plugins() to return the old version
@@ -487,7 +493,8 @@ function wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version, $ret
         clearstatcache( true );
         $plugins     = get_plugins();
         $new_version = isset( $plugins[ $slug ]['Version'] ) ? $plugins[ $slug ]['Version'] : '';
-        return [ 'success', $new_version, '', '' ];
+        $msg = $retried ? 'Updated successfully (required a fresh package URL — retry succeeded).' : '';
+        return [ 'success', $new_version, '', $msg ];
     }
 
     if ( is_null( $result ) ) {
@@ -500,20 +507,29 @@ function wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version, $ret
             return [ 'success', $ver_now, '', 'Updated successfully (confirmed via version comparison).' ];
         }
 
-        // Collect everything the skin recorded for diagnostics.
-        $skin_errors   = $skin->get_errors()->get_error_messages();
-        $skin_messages = method_exists( $skin, 'get_upgrade_messages' ) ? $skin->get_upgrade_messages() : [];
-        $skin_result   = isset( $skin->result ) ? $skin->result : 'not set';
-        $skin_result_s = is_array( $skin_result ) ? wp_json_encode( $skin_result ) : var_export( $skin_result, true );
+        // Check whether the skin recorded a specific filesystem error.
+        // When WordPress downloads and extracts successfully but cannot write
+        // a file to disk (e.g. permissions), the skin logs "Could not copy file"
+        // but Plugin_Upgrader still returns null rather than WP_Error.
+        // Surface that specific error instead of the generic version-unchanged message.
+        $skin_errors = $skin->get_errors()->get_error_messages();
+        if ( ! empty( $skin_errors ) ) {
+            $skin_msg = implode( ' ', $skin_errors );
+            // Identify file-permission failures specifically.
+            if ( stripos( $skin_msg, 'could not copy' ) !== false
+                || stripos( $skin_msg, 'copy failed' ) !== false
+                || stripos( $skin_msg, 'mkdir' ) !== false ) {
+                $explain = wpmm_explain_error( 'copy_failed' );
+                return [ 'failed', '', 'copy_failed',
+                    $explain['detail'] . ' WordPress reported: ' . $skin_msg ];
+            }
+            // Other skin error — return it verbatim.
+            return [ 'failed', '', 'update_failed', $skin_msg ];
+        }
 
-        $diag = '[NULL result] slug=' . $slug
-            . ' | old=' . $old_version . ' | now=' . $ver_now
-            . ' | retry=' . ( $retry ? 'true' : 'false' )
-            . ' | skin_errors=' . ( $skin_errors ? implode( '; ', $skin_errors ) : 'none' )
-            . ' | skin_msgs=' . ( $skin_messages ? implode( '; ', $skin_messages ) : 'none' )
-            . ' | skin_result=' . $skin_result_s;
-
-        // Retry once with a freshly fetched package URL.
+        // No skin error recorded. The most common remaining cause is a signed
+        // package URL that expired between our HEAD check and the actual download.
+        // Force a fresh wp_update_plugins() to get a new URL and retry once.
         if ( $retry ) {
             require_once ABSPATH . 'wp-admin/includes/update.php';
             delete_site_transient( 'update_plugins' );
@@ -524,13 +540,12 @@ function wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version, $ret
                 $skin2     = new WP_Ajax_Upgrader_Skin();
                 $upgrader2 = new Plugin_Upgrader( $skin2 );
                 $result2   = $upgrader2->upgrade( $slug );
-                return wpmm_interpret_plugin_result( $result2, $skin2, $slug, $old_version, false );
+                return wpmm_interpret_plugin_result( $result2, $skin2, $slug, $old_version, false, true );
             }
-            $diag .= ' | after_refresh=not_in_transient';
         }
 
         $code = 'wpmm_version_unchanged';
-        return [ 'failed', '', $code, wpmm_explain_error( $code )['detail'] . ' DEBUG: ' . $diag ];
+        return [ 'failed', '', $code, wpmm_explain_error( $code )['detail'] ];
     }
 
     if ( is_wp_error( $result ) ) {

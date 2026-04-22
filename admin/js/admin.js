@@ -288,10 +288,27 @@ jQuery(function ($) {
                 '</strong> &rarr; Available: <strong>' + escHtml(item.new_version) + '</strong></div>'
             );
             var $act = $('<div class="wpmm-item-action"></div>');
-            var $btn = $('<button class="wpmm-btn wpmm-btn-primary wpmm-btn-sm wpmm-update-one-btn">Update</button>')
-                .attr({ 'data-type': type, 'data-slug': item.slug });
-            var $st  = $('<div class="wpmm-item-status"></div>');
-            $act.append($btn, $st);
+
+            if ( item.requires_manual ) {
+                // No package URL — vendor requires a browser-based license check
+                // before providing a download link (e.g. Gravity Forms add-ons).
+                // Show an informational warning instead of an Update button.
+                $cb.prop('disabled', true).prop('checked', false);
+                var $warn = $('<div class="wpmm-item-status"></div>').html(
+                    '<span class="wpmm-status-warning" style="color:#b45309;">' +
+                    '&#9888; Manual update required &mdash; this plugin\'s vendor requires a ' +
+                    'browser-based license check to download updates. Please update it via ' +
+                    'Dashboard &rarr; Updates or the plugin\'s own settings page.' +
+                    '</span>'
+                );
+                $act.append($warn);
+            } else {
+                var $btn = $('<button class="wpmm-btn wpmm-btn-primary wpmm-btn-sm wpmm-update-one-btn">Update</button>')
+                    .attr({ 'data-type': type, 'data-slug': item.slug });
+                var $st  = $('<div class="wpmm-item-status"></div>');
+                $act.append($btn, $st);
+            }
+
             $li.append($cb, $inf, $act);
             $list.append($li);
         });
