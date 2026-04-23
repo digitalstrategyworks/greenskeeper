@@ -1,5 +1,11 @@
 # Greenskeeper
 
+[![WordPress Plugin Version](https://img.shields.io/wordpress/plugin/v/greenskeeper)](https://wordpress.org/plugins/greenskeeper/)
+[![WordPress Plugin Downloads](https://img.shields.io/wordpress/plugin/dt/greenskeeper)](https://wordpress.org/plugins/greenskeeper/)
+[![WordPress Plugin Rating](https://img.shields.io/wordpress/plugin/rating/greenskeeper)](https://wordpress.org/plugins/greenskeeper/)
+[![License](https://img.shields.io/badge/license-GPL--2.0%2B-blue)](https://www.gnu.org/licenses/gpl-2.0.html)
+
+
 **Version:** 2.0.4  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
