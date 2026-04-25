@@ -726,12 +726,14 @@ function wpmm_render_dashboard() {
     $logo_url     = ! empty( $s['logo_url'] )     ? $s['logo_url']     : '';
     $default_admin = wpmm_get_default_admin();
 
-    // Most recent update session
+    // Most recent update session — use MAX(updated_at) for a deterministic result.
+    // A bare updated_at with aggregate functions (COUNT, SUM) is nondeterministic
+    // in MySQL without GROUP BY; MAX() makes it well-defined.
     $log_table   = esc_sql( $wpdb->prefix . 'wpmm_update_log' );
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- table name is safe (prefix + fixed string), no user input involved.
-    $last_row    = $wpdb->get_row( "SELECT updated_at, COUNT(*) AS total, SUM(status='success') AS successes, SUM(status!='success') AS failures FROM {$log_table} ORDER BY updated_at DESC LIMIT 1" );
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+    $last_row    = $wpdb->get_row( "SELECT MAX(updated_at) AS updated_at, COUNT(*) AS total, SUM(status='success') AS successes, SUM(status!='success') AS failures FROM {$log_table}" );
     $last_update = $last_row && $last_row->updated_at
-        ? date_i18n( 'F j, Y 	 g:i A', strtotime( $last_row->updated_at ) )
+        ? date_i18n( 'F j, Y \at g:i A', strtotime( $last_row->updated_at ) )
         : null;
     ?>
     <div class="wpmm-wrap">
@@ -1073,40 +1075,56 @@ function wpmm_render_log() {
     if ( $log_from ) { $where .= ' AND DATE(updated_at) >= %s'; $args[] = $log_from; }
     if ( $log_to )   { $where .= ' AND DATE(updated_at) <= %s'; $args[] = $log_to; }
 
-    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is safe (prefix + fixed string); user values are passed via prepare() args.
-    $sql  = "SELECT * FROM {$log_table} {$where} ORDER BY updated_at DESC";
-    $rows = $args
-        ? $wpdb->get_results( $wpdb->prepare( $sql, $args ) ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-        : $wpdb->get_results( $sql ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+    // ── Paginate sessions in SQL rather than loading all rows first ──────────
+    // 1. Count distinct sessions matching the filters.
+    // 2. Fetch only the session_ids for the current page.
+    // 3. Fetch all rows for those session_ids only.
+    // This prevents loading the entire log history into memory on large sites.
 
-    // Group rows into sessions in PHP.
-    $sessions      = [];
-    $session_items = [];
+    // Step 1 — count distinct sessions.
+    $count_sql = "SELECT COUNT(DISTINCT CASE WHEN session_id != '' THEN session_id ELSE CONCAT('legacy-', DATE(updated_at)) END) FROM {$log_table} {$where}";
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+    $sess_total = (int) ( $args ? $wpdb->get_var( $wpdb->prepare( $count_sql, $args ) ) : $wpdb->get_var( $count_sql ) );
 
-    foreach ( (array) $rows as $row ) {
-        $key = ( isset( $row->session_id ) && $row->session_id !== '' )
-            ? $row->session_id
-            : 'legacy-' . substr( $row->updated_at, 0, 10 );
-
-        if ( ! isset( $session_items[ $key ] ) ) {
-            $sessions[]            = $key;
-            $session_items[ $key ] = [];
-        }
-        $session_items[ $key ][] = $row;
-    }
-
-    // Sort items within each session ascending (oldest first = session start time at top).
-    foreach ( $session_items as $key => &$items_ref ) {
-        usort( $items_ref, function( $a, $b ) {
-            return strcmp( $a->updated_at, $b->updated_at );
-        } );
-    }
-    unset( $items_ref );
-
-    $sess_total = count( $sessions );
     $sess_pages = max( 1, (int) ceil( $sess_total / $per_page ) );
-    $sess_page  = min( $sess_page, $sess_pages ); // clamp to valid range
-    $page_keys  = array_slice( $sessions, ( $sess_page - 1 ) * $per_page, $per_page );
+    $sess_page  = min( $sess_page, $sess_pages );
+    $offset     = ( $sess_page - 1 ) * $per_page;
+
+    // Step 2 — fetch session IDs for this page only.
+    $sid_sql = "SELECT CASE WHEN session_id != '' THEN session_id ELSE CONCAT('legacy-', DATE(updated_at)) END AS sid
+                FROM {$log_table} {$where}
+                GROUP BY sid ORDER BY MAX(updated_at) DESC
+                LIMIT %d OFFSET %d";
+    $sid_args = array_merge( $args ?: [], [ $per_page, $offset ] );
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+    $page_sids = $wpdb->get_col( $wpdb->prepare( $sid_sql, $sid_args ) );
+
+    // Step 3 — fetch rows for the visible sessions only.
+    $session_items = [];
+    $sessions      = [];
+    $page_keys     = $page_sids;
+
+    if ( ! empty( $page_sids ) ) {
+        $sid_placeholders = implode( ',', array_fill( 0, count( $page_sids ), '%s' ) );
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM {$log_table} WHERE
+             CASE WHEN session_id != '' THEN session_id ELSE CONCAT('legacy-', DATE(updated_at)) END
+             IN ({$sid_placeholders}) ORDER BY updated_at ASC",
+            $page_sids
+        ) );
+
+        foreach ( (array) $rows as $row ) {
+            $key = ( isset( $row->session_id ) && $row->session_id !== '' )
+                ? $row->session_id
+                : 'legacy-' . substr( $row->updated_at, 0, 10 );
+            if ( ! isset( $session_items[ $key ] ) ) {
+                $sessions[]            = $key;
+                $session_items[ $key ] = [];
+            }
+            $session_items[ $key ][] = $row;
+        }
+    }
 
     // Base URL carries all active filters (used by pagination and limit links).
     $filter_qs = '';

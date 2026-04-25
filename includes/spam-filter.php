@@ -285,13 +285,33 @@ function wpmm_akismet_check( $api_key, $comment_data ) {
 add_action( 'wp_ajax_wpmm_verify_akismet_key', 'wpmm_ajax_verify_akismet_key' );
 function wpmm_ajax_verify_akismet_key() {
     check_ajax_referer( 'wpmm_nonce', 'nonce' );
-    if ( ! current_user_can( 'manage_options' ) ) {
+
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified above.
+    $spam_site_id = absint( $_POST['spam_site_id'] ?? 0 );
+
+    // Cross-site: require network permission before switching blogs.
+    if ( is_multisite() && $spam_site_id > 0 && $spam_site_id !== get_current_blog_id() ) {
+        if ( ! current_user_can( 'manage_network' ) && ! is_super_admin() ) {
+            wp_send_json_error( 'Network administrator permission required.' );
+        }
+        $site = get_site( $spam_site_id );
+        if ( ! $site ) {
+            wp_send_json_error( 'Invalid site ID.' );
+        }
+    } elseif ( ! current_user_can( 'manage_options' ) ) {
         wp_send_json_error( 'Permission denied.' );
     }
 
     $key = sanitize_text_field( wp_unslash( $_POST['akismet_key'] ?? '' ) );
     if ( ! $key ) {
         wp_send_json_error( 'No key provided.' );
+    }
+
+    // Switch to the selected site BEFORE reading its URL and saving.
+    $switched = false;
+    if ( is_multisite() && $spam_site_id > 0 && $spam_site_id !== get_current_blog_id() ) {
+        switch_to_blog( $spam_site_id );
+        $switched = true;
     }
 
     $response = wp_remote_post(
@@ -303,17 +323,19 @@ function wpmm_ajax_verify_akismet_key() {
     );
 
     if ( is_wp_error( $response ) ) {
+        if ( $switched ) { restore_current_blog(); }
         wp_send_json_error( 'Could not reach Akismet servers. Check your connection.' );
     }
 
     $body = trim( wp_remote_retrieve_body( $response ) );
     if ( $body === 'valid' ) {
-        // Save the key
         $s = wpmm_get_settings();
         $s['akismet_key'] = $key;
         wpmm_save_settings( $s );
+        if ( $switched ) { restore_current_blog(); }
         wp_send_json_success( [ 'message' => 'API key verified and saved.' ] );
     } else {
+        if ( $switched ) { restore_current_blog(); }
         wp_send_json_error( 'Invalid API key. Please check and try again.' );
     }
 }
@@ -435,7 +457,14 @@ function wpmm_spam_die( $reason = 'spam', $comment_data = [] ) {
 add_action( 'wp_ajax_wpmm_delete_spam_entries', 'wpmm_ajax_delete_spam_entries' );
 function wpmm_ajax_delete_spam_entries() {
     check_ajax_referer( 'wpmm_nonce', 'nonce' );
-    if ( ! current_user_can( 'manage_options' ) ) {
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified above.
+    $spam_site_id = absint( $_POST['spam_site_id'] ?? 0 );
+    if ( is_multisite() && $spam_site_id > 0 && $spam_site_id !== get_current_blog_id() ) {
+        if ( ! current_user_can( 'manage_network' ) && ! is_super_admin() ) {
+            wp_send_json_error( 'Network administrator permission required.' );
+        }
+        if ( ! get_site( $spam_site_id ) ) { wp_send_json_error( 'Invalid site ID.' ); }
+    } elseif ( ! current_user_can( 'manage_options' ) ) {
         wp_send_json_error( 'Permission denied.' );
     }
 
@@ -445,13 +474,19 @@ function wpmm_ajax_delete_spam_entries() {
         wp_send_json_error( 'No IDs provided.' );
     }
 
+    $switched = false;
+    if ( is_multisite() && $spam_site_id > 0 && $spam_site_id !== get_current_blog_id() ) {
+        switch_to_blog( $spam_site_id );
+        $switched = true;
+    }
+
     $placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-    // Dynamic IN() clause — placeholders are %d repeated per ID count, built safely via array_fill().
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
     $deleted = $wpdb->query(
         $wpdb->prepare( 'DELETE FROM ' . esc_sql( $wpdb->prefix . 'wpmm_spam_log' ) . ' WHERE id IN (' . $placeholders . ')', $ids ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     );
 
+    if ( $switched ) { restore_current_blog(); }
     wp_send_json_success( [ 'deleted' => $deleted ] );
 }
 
@@ -461,13 +496,26 @@ function wpmm_ajax_delete_spam_entries() {
 add_action( 'wp_ajax_wpmm_clear_spam_log', 'wpmm_ajax_clear_spam_log' );
 function wpmm_ajax_clear_spam_log() {
     check_ajax_referer( 'wpmm_nonce', 'nonce' );
-    if ( ! current_user_can( 'manage_options' ) ) {
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified above.
+    $spam_site_id = absint( $_POST['spam_site_id'] ?? 0 );
+    if ( is_multisite() && $spam_site_id > 0 && $spam_site_id !== get_current_blog_id() ) {
+        if ( ! current_user_can( 'manage_network' ) && ! is_super_admin() ) {
+            wp_send_json_error( 'Network administrator permission required.' );
+        }
+        if ( ! get_site( $spam_site_id ) ) { wp_send_json_error( 'Invalid site ID.' ); }
+    } elseif ( ! current_user_can( 'manage_options' ) ) {
         wp_send_json_error( 'Permission denied.' );
     }
     global $wpdb;
-    // TRUNCATE is DDL and cannot use $wpdb->prepare(). Table name is $wpdb->prefix + fixed string — no user input.
+    $switched = false;
+    if ( is_multisite() && $spam_site_id > 0 && $spam_site_id !== get_current_blog_id() ) {
+        switch_to_blog( $spam_site_id );
+        $switched = true;
+    }
+    // TRUNCATE is DDL — cannot use $wpdb->prepare(). Table name is prefix + fixed string.
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.NotPrepared
     $wpdb->query( 'TRUNCATE TABLE ' . esc_sql( $wpdb->prefix . 'wpmm_spam_log' ) );
+    if ( $switched ) { restore_current_blog(); }
     wp_send_json_success( 'Spam log cleared.' );
 }
 
@@ -477,13 +525,26 @@ function wpmm_ajax_clear_spam_log() {
 add_action( 'wp_ajax_wpmm_blocklist_ip', 'wpmm_ajax_blocklist_ip' );
 function wpmm_ajax_blocklist_ip() {
     check_ajax_referer( 'wpmm_nonce', 'nonce' );
-    if ( ! current_user_can( 'manage_options' ) ) {
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified above.
+    $spam_site_id = absint( $_POST['spam_site_id'] ?? 0 );
+    if ( is_multisite() && $spam_site_id > 0 && $spam_site_id !== get_current_blog_id() ) {
+        if ( ! current_user_can( 'manage_network' ) && ! is_super_admin() ) {
+            wp_send_json_error( 'Network administrator permission required.' );
+        }
+        if ( ! get_site( $spam_site_id ) ) { wp_send_json_error( 'Invalid site ID.' ); }
+    } elseif ( ! current_user_can( 'manage_options' ) ) {
         wp_send_json_error( 'Permission denied.' );
     }
 
     $ip = sanitize_text_field( wp_unslash( $_POST['ip'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
     if ( ! $ip ) {
         wp_send_json_error( 'No IP provided.' );
+    }
+
+    $switched = false;
+    if ( is_multisite() && $spam_site_id > 0 && $spam_site_id !== get_current_blog_id() ) {
+        switch_to_blog( $spam_site_id );
+        $switched = true;
     }
 
     $s        = wpmm_get_settings();
@@ -493,8 +554,10 @@ function wpmm_ajax_blocklist_ip() {
         $existing[] = $ip;
         $s['spam_ip_blocklist'] = implode( "\n", $existing );
         wpmm_save_settings( $s );
+        if ( $switched ) { restore_current_blog(); }
         wp_send_json_success( [ 'message' => $ip . ' added to IP blocklist.' ] );
     } else {
+        if ( $switched ) { restore_current_blog(); }
         wp_send_json_success( [ 'message' => $ip . ' is already in the IP blocklist.' ] );
     }
 }

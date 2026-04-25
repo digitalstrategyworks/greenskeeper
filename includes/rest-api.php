@@ -145,10 +145,12 @@ function wpmm_register_rest_routes() {
  * Returns true to allow, WP_Error to deny.
  */
 function wpmm_rest_auth( WP_REST_Request $request ) {
-    $stored_key = wpmm_get_api_key();
+    $s         = wpmm_get_settings();
+    $key_hash  = $s['api_key_hash'] ?? '';
+    $key_plain = $s['api_key']      ?? ''; // legacy plaintext key (pre-2.0.5)
 
-    // No key configured — API access disabled.
-    if ( empty( $stored_key ) ) {
+    // No key configured at all — API disabled.
+    if ( empty( $key_hash ) && empty( $key_plain ) ) {
         return new WP_Error(
             'smm_api_disabled',
             'Remote API access is not enabled. Generate an API key in Greenskeeper → Settings.',
@@ -157,22 +159,32 @@ function wpmm_rest_auth( WP_REST_Request $request ) {
     }
 
     $sent_key = $request->get_header( 'X-SMM-API-Key' );
-
-    if ( empty( $sent_key ) || ! hash_equals( $stored_key, $sent_key ) ) {
-        return new WP_Error(
-            'smm_unauthorized',
-            'Invalid or missing API key.',
-            [ 'status' => 401 ]
-        );
+    if ( empty( $sent_key ) ) {
+        return new WP_Error( 'smm_unauthorized', 'Missing API key.', [ 'status' => 401 ] );
     }
 
-    return true;
+    // Authenticate against the hash (current path).
+    if ( ! empty( $key_hash ) && hash_equals( $key_hash, wp_hash( $sent_key ) ) ) {
+        return true;
+    }
+
+    // Backward compatibility: if only a legacy plaintext key exists,
+    // accept it and migrate to the hashed format automatically.
+    if ( ! empty( $key_plain ) && hash_equals( $key_plain, $sent_key ) ) {
+        // Migrate to hashed storage transparently.
+        $s['api_key_hash'] = wp_hash( $key_plain );
+        $s['api_key']      = ''; // clear plaintext
+        wpmm_save_settings( $s );
+        return true;
+    }
+
+    return new WP_Error( 'smm_unauthorized', 'Invalid or missing API key.', [ 'status' => 401 ] );
 }
 
-// ── Key helpers ───────────────────────────────────────────────────────────────
 function wpmm_get_api_key() {
     $s = wpmm_get_settings();
-    return $s['api_key'] ?? '';
+    // Returns truthy if any key (hash or legacy plain) is configured.
+    return ! empty( $s['api_key_hash'] ) ? $s['api_key_hash'] : ( $s['api_key'] ?? '' );
 }
 
 function wpmm_generate_api_key() {

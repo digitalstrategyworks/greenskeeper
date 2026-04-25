@@ -233,14 +233,13 @@ jQuery(function ($) {
         var $container = $('#wpmm-update-sections');
         $container.empty();
 
-        var hasAny = data.core.length || data.plugins.length || data.themes.length;
+        // Always hide the success banner at the start of renderUpdates.
+        // It should only appear after a batch with at least one update
+        // actually completes — never just because the page loaded clean.
+        $('#wpmm-global-success').prop('hidden', true);
+        $('#wpmm-global-progress').prop('hidden', true);
 
-        // If new updates are available, hide the success banner — it belonged to
-        // the previous session and is no longer relevant.
-        if (hasAny) {
-            $('#wpmm-global-success').prop('hidden', true);
-            $('#wpmm-global-progress').prop('hidden', true);
-        }
+        var hasAny = data.core.length || data.plugins.length || data.themes.length;
 
         if (!hasAny) {
             $container.html(
@@ -1290,16 +1289,16 @@ jQuery(function ($) {
     // REMOTE API KEY (Settings page)
     // =========================================================================
     (function () {
-        // Copy key to clipboard
+        // Copy key — reads from the one-time reveal panel, not a data attribute
         $(document).on('click', '#wpmm-copy-api-key', function () {
-            var key = $(this).data('key');
+            var key = $('#wpmm-api-key-once').text().trim();
+            if (!key) { return; }
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(key).then(function () {
                     $('#wpmm-api-key-msg').html('<span style="color:#16a34a;">&#10003; Copied!</span>');
                     setTimeout(function () { $('#wpmm-api-key-msg').html(''); }, 2000);
                 });
             } else {
-                // Fallback for older browsers
                 var $tmp = $('<textarea>').val(key).appendTo('body').select();
                 document.execCommand('copy');
                 $tmp.remove();
@@ -1308,7 +1307,7 @@ jQuery(function ($) {
             }
         });
 
-        // Generate / rotate key
+        // Generate / rotate key — show key ONCE in reveal panel, never reload to display
         $(document).on('click', '#wpmm-generate-api-key', function () {
             var $btn = $(this);
             var $msg = $('#wpmm-api-key-msg');
@@ -1328,12 +1327,20 @@ jQuery(function ($) {
                 nonce:  wpmm.nonce
             })
             .done(function (res) {
-                if (res && res.success) {
-                    $msg.html('<span style="color:#16a34a;">&#10003; Key generated. Reloading…</span>');
-                    setTimeout(function () { location.reload(); }, 1000);
+                $btn.prop('disabled', false)
+                    .html('<span class="dashicons dashicons-update"></span> Rotate Key');
+                if (res && res.success && res.data.api_key) {
+                    // Show the raw key exactly once — never store or display it again.
+                    $('#wpmm-api-key-once').text(res.data.api_key);
+                    $('#wpmm-new-key-reveal').show();
+                    // Update the display badge to show key is configured.
+                    $('#wpmm-api-key-display').text('\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022 (key configured \u2014 rotate to view a new key)');
+                    // Show revoke button if it was hidden (first generation).
+                    if (!$('#wpmm-revoke-api-key').length) {
+                        $btn.after(' <button type="button" id="wpmm-revoke-api-key" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm" style="color:var(--wpmm-red);border-color:#fca5a5;"><span class="dashicons dashicons-trash"></span> Revoke Key</button>');
+                    }
+                    $msg.html('<span style="color:#16a34a;">&#10003; Key generated. Copy it now.</span>');
                 } else {
-                    $btn.prop('disabled', false)
-                        .html('<span class="dashicons dashicons-update"></span> ' + (isRotate ? 'Rotate Key' : 'Generate API Key'));
                     $msg.html('<span style="color:#dc2626;">Failed: ' + (res.data || 'unknown error') + '</span>');
                 }
             })
@@ -1549,9 +1556,10 @@ jQuery(function ($) {
             if (!window.confirm('Delete ' + ids.length + ' selected entr' + (ids.length === 1 ? 'y' : 'ies') + '?')) return;
 
             $.post(wpmm.ajax_url, {
-                action: 'wpmm_delete_spam_entries',
-                nonce:  wpmm.nonce,
-                ids:    ids
+                action:        'wpmm_delete_spam_entries',
+                nonce:         wpmm.nonce,
+                ids:           ids,
+                spam_site_id:  $('#wpmm-spam-scope-site-id').val() || '0'
             }).done(function (res) {
                 if (res && res.success) {
                     ids.forEach(function (id) {
@@ -1571,9 +1579,10 @@ jQuery(function ($) {
             if (!window.confirm('Delete this entry?')) return;
 
             $.post(wpmm.ajax_url, {
-                action: 'wpmm_delete_spam_entries',
-                nonce:  wpmm.nonce,
-                ids:    [id]
+                action:       'wpmm_delete_spam_entries',
+                nonce:        wpmm.nonce,
+                ids:          [id],
+                spam_site_id: $('#wpmm-spam-scope-site-id').val() || '0'
             }).done(function (res) {
                 if (res && res.success) { $tr.remove(); showMsg('Entry deleted.', true); }
                 else { showMsg('Delete failed.', false); }
@@ -1584,8 +1593,9 @@ jQuery(function ($) {
         $(document).on('click', '#wpmm-spam-clear-all', function () {
             if (!window.confirm('Delete ALL spam log entries? This cannot be undone.')) return;
             $.post(wpmm.ajax_url, {
-                action: 'wpmm_clear_spam_log',
-                nonce:  wpmm.nonce
+                action:       'wpmm_clear_spam_log',
+                nonce:        wpmm.nonce,
+                spam_site_id: $('#wpmm-spam-scope-site-id').val() || '0'
             }).done(function (res) {
                 if (res && res.success) {
                     showMsg('Spam log cleared. Reloading…', true);
@@ -1600,9 +1610,10 @@ jQuery(function ($) {
             var ip   = $btn.data('ip');
             $btn.prop('disabled', true);
             $.post(wpmm.ajax_url, {
-                action: 'wpmm_blocklist_ip',
-                nonce:  wpmm.nonce,
-                ip:     ip
+                action:       'wpmm_blocklist_ip',
+                nonce:        wpmm.nonce,
+                ip:           ip,
+                spam_site_id: $('#wpmm-spam-scope-site-id').val() || '0'
             }).done(function (res) {
                 $btn.prop('disabled', false);
                 if (res && res.success) { showMsg(res.data.message, true); }

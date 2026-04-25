@@ -9,6 +9,12 @@ add_action( 'wp_ajax_wpmm_get_email_body','wpmm_ajax_get_email_body' );
 // wpmm_save_settings is registered in admin/settings.php
 
 // ── Shared capability check ───────────────────────────────────────────────────
+/**
+ * Verifies the nonce and base capability for all Greenskeeper AJAX actions.
+ * For multisite cross-site requests (site_id targets a different blog), also
+ * requires super admin / manage_network — a site-level admin must not be able
+ * to trigger actions on another site by passing an arbitrary site_id.
+ */
 function wpmm_ajax_cap_check() {
     check_ajax_referer( 'wpmm_nonce', 'nonce' );
     if ( ! current_user_can( wpmm_required_cap() ) ) {
@@ -16,30 +22,56 @@ function wpmm_ajax_cap_check() {
     }
 }
 
-// ── Run a single update ───────────────────────────────────────────────────────
-function wpmm_ajax_run_update() {
+/**
+ * Extended cap check for actions that accept a site_id parameter.
+ * Validates that the site exists and — when targeting a different site —
+ * that the current user has network-level permission.
+ * Returns the validated site ID (0 = current site, no switch needed).
+ */
+function wpmm_ajax_cap_check_with_site() {
     wpmm_ajax_cap_check();
 
-    // Plugin and theme updates can take 30-60 seconds on slow hosts.
-    // Extend the execution limit for this request only so the update
-    // completes before PHP cuts it off. 0 = no limit (safe in this context
-    // because the request is authenticated and admin-only).
-    if ( function_exists( 'set_time_limit' ) ) {
-        set_time_limit( 300 ); // 5 minutes maximum per individual update
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified in wpmm_ajax_cap_check().
+    $site_id = absint( $_POST['site_id'] ?? 0 );
+
+    if ( ! is_multisite() || $site_id === 0 || $site_id === get_current_blog_id() ) {
+        return $site_id; // Same-site request — existing capability is sufficient.
     }
 
-    $type       = sanitize_text_field( wp_unslash( $_POST['item_type']  ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified via wpmm_ajax_cap_check().
-    $slug       = sanitize_text_field( wp_unslash( $_POST['item_slug']  ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
-    $session_id = sanitize_text_field( wp_unslash( $_POST['session_id'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
-    $package    = esc_url_raw( wp_unslash( $_POST['package'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
-    $site_id    = absint( $_POST['site_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    // Cross-site request: verify the site exists.
+    $site = get_site( $site_id );
+    if ( ! $site ) {
+        wp_send_json_error( 'Invalid site ID.' );
+    }
+
+    // Cross-site request: require network-level permission.
+    if ( ! current_user_can( 'manage_network' ) && ! is_super_admin() ) {
+        wp_send_json_error( 'Network administrator permission required to perform actions on another site.' );
+    }
+
+    return $site_id;
+}
+
+// ── Run a single update ───────────────────────────────────────────────────────
+function wpmm_ajax_run_update() {
+    // Validates nonce, base capability, AND cross-site permission if site_id
+    // targets a different blog. Returns the validated site_id.
+    $site_id = wpmm_ajax_cap_check_with_site();
+
+    if ( function_exists( 'set_time_limit' ) ) {
+        set_time_limit( 300 );
+    }
+
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified above.
+    $type       = sanitize_text_field( wp_unslash( $_POST['item_type']  ?? '' ) );
+    $slug       = sanitize_text_field( wp_unslash( $_POST['item_slug']  ?? '' ) );
+    $session_id = sanitize_text_field( wp_unslash( $_POST['session_id'] ?? '' ) );
+    $package    = esc_url_raw( wp_unslash( $_POST['package']    ?? '' ) );
 
     if ( ! $type || ! $slug ) {
         wp_send_json_error( 'Missing parameters.' );
     }
 
-    // Switch to the scoped site before running the update so the update
-    // runs in that site's context and logs to its own wpmm_update_log table.
     $switched = false;
     if ( is_multisite() && $site_id > 0 && $site_id !== get_current_blog_id() ) {
         switch_to_blog( $site_id );
@@ -186,27 +218,30 @@ function wpmm_ajax_send_email() {
         }
     }
 
-    $body   = wpmm_build_email_body( $log_entries, $admin_id, $manual_entries, $update_note );
-    $result = wpmm_send_email( $to, $subject, $body, $admin_id );
-
-    // ── All-Sites network email mode ──────────────────────────────────────────
-    // NOTE: This check must come AFTER the single-site send above so that
-    // non-network installs always use the path above. On network installs in
-    // All-Sites mode, the network email overwrites $result and returns early.
-    $network_all = ( isset( $_POST['network_all'] ) && (int) $_POST['network_all'] === 1 ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    // ── All-Sites network email mode — checked FIRST to avoid stale single-site send ──
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified above.
+    $network_all = ( isset( $_POST['network_all'] ) && (int) $_POST['network_all'] === 1 );
     if ( is_multisite() && $network_all ) {
-        // Gather log entries from every site that had a session recently.
-        $sites      = get_sites( [ 'number' => 200, 'fields' => 'ids' ] );
-        $sites_data = [];
+        $sites            = get_sites( [ 'number' => 200, 'fields' => 'ids' ] );
+        $sites_data       = [];
+        $pending_sessions = get_option( 'wpmm_pending_sessions', [] );
         foreach ( $sites as $bid ) {
             switch_to_blog( $bid );
-            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-            if ( $session_id ) {
-                $site_entries = $wpdb->get_results( $wpdb->prepare(
-                    'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) . ' WHERE session_id = %s ORDER BY updated_at ASC',
-                    $session_id
-                ) );
+            $blog_sessions = array_filter( $pending_sessions, function( $p ) use ( $bid ) {
+                return isset( $p['blog_id'] ) && (int) $p['blog_id'] === (int) $bid;
+            } );
+            if ( ! empty( $blog_sessions ) ) {
+                $site_entries = [];
+                foreach ( $blog_sessions as $bp ) {
+                    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+                    $rows = $wpdb->get_results( $wpdb->prepare(
+                        'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) . ' WHERE session_id = %s ORDER BY updated_at ASC',
+                        $bp['session_id']
+                    ) );
+                    $site_entries = array_merge( $site_entries, $rows ?: [] );
+                }
             } else {
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
                 $site_entries = $wpdb->get_results( $wpdb->prepare(
                     'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) . ' ORDER BY updated_at DESC LIMIT %d',
                     50
@@ -225,12 +260,17 @@ function wpmm_ajax_send_email() {
         $body   = wpmm_build_network_email_body( $sites_data, $admin_id, $update_note );
         $result = wpmm_send_email( $to, $subject, $body, $admin_id );
         if ( $result['success'] ) {
+            delete_option( 'wpmm_pending_sessions' );
             wp_send_json_success( [ 'message' => 'Network report sent successfully.', 'email_id' => $result['email_id'] ] );
         } else {
             wp_send_json_error( 'Network email failed to send.' );
         }
-        return;
+        return; // Never fall through to single-site send.
     }
+
+    // ── Single-site email ─────────────────────────────────────────────────────
+    $body   = wpmm_build_email_body( $log_entries, $admin_id, $manual_entries, $update_note );
+    $result = wpmm_send_email( $to, $subject, $body, $admin_id );
 
     if ( $result['success'] ) {
         // Clear the pending sessions list now that the email has been sent.
@@ -296,8 +336,7 @@ function wpmm_ajax_resend_email() {
 
 // ── Retrieve available updates ────────────────────────────────────────────────
 function wpmm_ajax_get_updates() {
-    wpmm_ajax_cap_check();
-    $site_id = absint( $_POST['site_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified via wpmm_ajax_cap_check().
+    $site_id = wpmm_ajax_cap_check_with_site();
     $updates = wpmm_get_available_updates( $site_id );
     wp_send_json_success( $updates );
 }

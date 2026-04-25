@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.0.4
+Stable tag:        2.0.5
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,35 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.0.5 =
+* Security fix: Cross-site AJAX capability bypass on multisite (#1).
+  A new wpmm_ajax_cap_check_with_site() function validates that the
+  requested site_id exists and requires manage_network / super admin
+  when the request targets a different site. Same-site requests keep
+  the existing capability behavior.
+* Security fix: Akismet key verification now switches to the selected
+  site before verifying and saving the key, preventing writes to the
+  wrong site on multisite networks (#7).
+* Security fix: Spam log row actions (delete, clear, blocklist) now
+  pass spam_site_id and perform a validated blog switch before
+  mutating data, preventing cross-site mutations on multisite (#8).
+* Security fix: REST API key is now stored as a wp_hash() digest
+  rather than plaintext. The raw key is shown once after generation
+  and never stored or re-displayed. Existing plaintext keys are
+  migrated to hashed storage automatically on first use (#9).
+* Fix: All-Sites network email is now built and sent before the
+  single-site path, eliminating the stale single-site email that
+  was sent first in network mode (#2).
+* Fix: Dashboard latest-update date now uses MAX(updated_at) for a
+  deterministic aggregate result. Date format string corrected (#6).
+* Fix: Update log page now paginates sessions in SQL (COUNT DISTINCT,
+  then fetch page session IDs, then fetch only those rows), preventing
+  full-table loads on large histories (#10).
+* Fix: Success banner on the Updates page is now hidden unconditionally
+  at the start of renderUpdates() and shown only after a batch with at
+  least one update completes, eliminating the false-success state on a
+  clean page with no available updates (#11).
 
 = 2.0.4 =
 * Feature: Email reports now accumulate ALL unsent update sessions.

@@ -52,10 +52,15 @@ function wpmm_ajax_generate_api_key() {
     }
     $new_key = wpmm_generate_api_key();
     $s = wpmm_get_settings();
-    $s['api_key'] = $new_key;
+    // Store only the hash — the raw key is returned once to the UI and
+    // never saved in plaintext. Authentication uses hash_equals() against
+    // wp_hash() of the incoming key, so the raw key is never recoverable
+    // from the database, backups, or option dumps.
+    $s['api_key']      = '';                     // clear plaintext field
+    $s['api_key_hash'] = wp_hash( $new_key );    // store hash only
     wpmm_save_settings( $s );
     wp_send_json_success( [
-        'api_key'  => $new_key,
+        'api_key'  => $new_key,                  // shown once in UI, never stored
         'rest_url' => get_rest_url( null, 'smm/v1' ),
     ] );
 }
@@ -66,7 +71,8 @@ function wpmm_ajax_revoke_api_key() {
         wp_send_json_error( 'Permission denied.' );
     }
     $s = wpmm_get_settings();
-    $s['api_key'] = '';
+    $s['api_key']      = '';
+    $s['api_key_hash'] = '';
     wpmm_save_settings( $s );
     wp_send_json_success( [ 'message' => 'API key revoked. Remote access is now disabled.' ] );
 }
@@ -122,8 +128,11 @@ function wpmm_render_settings() {
     $client_email     = $s['client_email'] ?? get_option( 'wpmm_client_email', '' );
     $logo_url         = $s['logo_url']     ?? '';
 
-    // REST API key
-    $api_key         = $s['api_key'] ?? '';
+    // REST API key — key_hash means a key exists but is not displayable.
+    // Legacy api_key is plaintext (pre-2.0.5) — will be migrated on first auth.
+    $api_key_hash  = $s['api_key_hash'] ?? '';
+    $api_key_plain = $s['api_key']      ?? '';
+    $api_key_set   = ! empty( $api_key_hash ) || ! empty( $api_key_plain );
 
     // Spam filter settings
     $spam_enabled      = ! empty( $s['spam_filter_enabled'] );
@@ -393,35 +402,56 @@ function wpmm_render_settings() {
                         <span>Used by your hub site to authenticate requests.</span>
                     </div>
                     <div class="wpmm-settings-group-control">
-                        <?php if ( $api_key ) : ?>
+                        <?php if ( $api_key_set ) : ?>
+                            <?php if ( ! empty( $api_key_plain ) ) : ?>
+                            <!-- Legacy plaintext key — show migration notice -->
+                            <div style="background:#fefce8;border:1px solid #fde047;border-radius:6px;padding:10px 14px;margin-bottom:10px;font-size:13px;">
+                                &#9888; Your API key is stored in legacy plaintext format. Rotate the key to upgrade to secure hashed storage.
+                            </div>
+                            <?php endif; ?>
                             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                                <!-- Key is hashed — never display the value, only confirm it exists -->
                                 <code id="wpmm-api-key-display"
-                                      style="background:#f1f5f9;border:1px solid var(--wpmm-border);padding:8px 14px;border-radius:6px;font-size:13px;letter-spacing:.04em;flex:1;max-width:440px;word-break:break-all;">
-                                    <?php echo esc_html( $api_key ); ?>
+                                      style="background:#f1f5f9;border:1px solid var(--wpmm-border);padding:8px 14px;border-radius:6px;font-size:13px;color:var(--wpmm-gray);flex:1;max-width:440px;">
+                                    &bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull; (key configured — rotate to view a new key)
                                 </code>
-                                <button type="button" id="wpmm-copy-api-key"
-                                        class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm"
-                                        data-key="<?php echo esc_attr( $api_key ); ?>">
-                                    <span class="dashicons dashicons-clipboard"></span> Copy
-                                </button>
+                            </div>
+                            <!-- New key shown here by JS immediately after generation/rotation -->
+                            <div id="wpmm-new-key-reveal" style="display:none;margin-top:10px;padding:12px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;">
+                                <p style="margin:0 0 6px;font-size:12px;font-weight:600;color:#166534;">&#10003; New key — copy it now. It will not be shown again.</p>
+                                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                    <code id="wpmm-api-key-once" style="font-size:13px;letter-spacing:.04em;flex:1;word-break:break-all;"></code>
+                                    <button type="button" id="wpmm-copy-api-key" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm">
+                                        <span class="dashicons dashicons-clipboard"></span> Copy
+                                    </button>
+                                </div>
                             </div>
                             <p class="wpmm-hint" style="margin-top:8px;">
                                 REST API base URL:
                                 <code><?php echo esc_url( get_rest_url( null, 'smm/v1' ) ); ?></code>
                             </p>
                         <?php else : ?>
+                            <div id="wpmm-new-key-reveal" style="display:none;margin-top:0;padding:12px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;margin-bottom:12px;">
+                                <p style="margin:0 0 6px;font-size:12px;font-weight:600;color:#166534;">&#10003; New key — copy it now. It will not be shown again.</p>
+                                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                    <code id="wpmm-api-key-once" style="font-size:13px;letter-spacing:.04em;flex:1;word-break:break-all;"></code>
+                                    <button type="button" id="wpmm-copy-api-key" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm">
+                                        <span class="dashicons dashicons-clipboard"></span> Copy
+                                    </button>
+                                </div>
+                            </div>
                             <p style="color:var(--wpmm-gray);font-size:13px;margin:0 0 12px;">
                                 No API key generated yet. Remote API access is disabled until you generate a key.
                             </p>
                         <?php endif; ?>
 
-                        <div style="display:flex;align-items:center;gap:10px;margin-top:<?php echo $api_key ? '12px' : '0'; ?>">
+                        <div style="display:flex;align-items:center;gap:10px;margin-top:<?php echo $api_key_set ? '12px' : '0'; ?>">
                             <button type="button" id="wpmm-generate-api-key"
                                     class="wpmm-btn wpmm-btn-primary wpmm-btn-sm">
                                 <span class="dashicons dashicons-update"></span>
-                                <?php echo $api_key ? 'Rotate Key' : 'Generate API Key'; ?>
+                                <?php echo $api_key_set ? 'Rotate Key' : 'Generate API Key'; ?>
                             </button>
-                            <?php if ( $api_key ) : ?>
+                            <?php if ( $api_key_set ) : ?>
                                 <button type="button" id="wpmm-revoke-api-key"
                                         class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm"
                                         style="color:var(--wpmm-red);border-color:#fca5a5;">
