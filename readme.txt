@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.0.6
+Stable tag:        2.0.7
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,23 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.0.7 =
+* Fix: Collateral plugin deactivation on retry (improved from v2.0.6).
+  v2.0.6 took a per-request snapshot which failed on retries — by the
+  time the retry fired, the collateral victim was already deactivated
+  so it didn't appear in the "before" snapshot. v2.0.7 persists the
+  pre-batch snapshot as a transient keyed to the session ID so that
+  retries restore from the original pre-batch active plugin state.
+  Also switched from activate_plugins() to direct option write to
+  bypass dependency validation checks that can silently fail when
+  Divi or another plugin is in a mid-update state during restore.
+* Feature: Backup warning modal shown before any update action. A
+  modal dialog prompts the user to confirm their site is backed up
+  before proceeding with any plugin, theme, or core update — either
+  a batch "Update Selected" run or an individual Update button click.
+  The modal is shown once per page load; after confirming, subsequent
+  updates in the same session proceed without interruption.
 
 = 2.0.6 =
 * Fix: Collateral plugin deactivation caused by WordPress's own error

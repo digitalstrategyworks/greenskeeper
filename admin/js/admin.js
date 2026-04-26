@@ -333,8 +333,54 @@ jQuery(function ($) {
         loadUpdates();
     });
 
+    // ── Backup Warning Modal ───────────────────────────────────────────────
+    // Shown once per page load before the first update fires.
+    // After the user confirms, all subsequent updates in the session
+    // proceed without showing the modal again.
+    var backupConfirmed = false;
+
+    function requireBackupConfirmation(callback) {
+        if (backupConfirmed) {
+            callback(true);
+            return;
+        }
+        var $modal = $('#wpmm-backup-modal');
+        $modal.removeClass('wpmm-modal-closed');
+
+        function cleanup() {
+            $('#wpmm-backup-confirm, #wpmm-backup-cancel').off('click.backup');
+            $('#wpmm-backup-modal .wpmm-modal-overlay').off('click.backup');
+            $(document).off('keydown.backup');
+        }
+
+        $('#wpmm-backup-confirm').off('click.backup').on('click.backup', function () {
+            backupConfirmed = true;
+            $modal.addClass('wpmm-modal-closed');
+            cleanup();
+            callback(true);
+        });
+
+        $('#wpmm-backup-cancel, #wpmm-backup-modal .wpmm-modal-overlay')
+            .off('click.backup').on('click.backup', function () {
+            $modal.addClass('wpmm-modal-closed');
+            cleanup();
+            callback(false);
+        });
+
+        $(document).off('keydown.backup').on('keydown.backup', function (e) {
+            if (e.key === 'Escape') {
+                $modal.addClass('wpmm-modal-closed');
+                cleanup();
+                callback(false);
+            }
+        });
+    }
+
     // ── Update Selected ────────────────────────────────────────────────────
     $(document).on('click', '#wpmm-update-selected', function () {
+        requireBackupConfirmation(function (confirmed) {
+            if (!confirmed) { return; }
+
         performingAdminId  = parseInt($('#wpmm-performing-admin').val() || 0, 10);
         sessionId          = 'wpmm-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
         updatesRanThisLoad = true;
@@ -408,24 +454,29 @@ jQuery(function ($) {
                 $('#wpmm-global-success').prop('hidden', false);
             }, 600);
         });
+
+        }); // end requireBackupConfirmation callback
     });
 
     // ── Update One ─────────────────────────────────────────────────────────
     $(document).on('click', '.wpmm-update-one-btn', function () {
         var $btn = $(this);
         var $li  = $btn.closest('.wpmm-item');
-        if ( !updatesRanThisLoad ) {
-            sessionId          = 'wpmm-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-            updatesRanThisLoad = true;
-        }
-        runSingleUpdate(
-            $li.data('type'),
-            $li.data('slug'),
-            $li.data('package') || '',
-            $li,
-            $btn,
-            function () {}
-        );
+        requireBackupConfirmation(function (confirmed) {
+            if (!confirmed) { return; }
+            if ( !updatesRanThisLoad ) {
+                sessionId          = 'wpmm-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+                updatesRanThisLoad = true;
+            }
+            runSingleUpdate(
+                $li.data('type'),
+                $li.data('slug'),
+                $li.data('package') || '',
+                $li,
+                $btn,
+                function () {}
+            );
+        });
     });
 
     // ── Sequential batch runner ────────────────────────────────────────────

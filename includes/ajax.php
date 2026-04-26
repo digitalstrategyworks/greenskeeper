@@ -80,16 +80,19 @@ function wpmm_ajax_run_update() {
 
     // ── Active plugin snapshot ────────────────────────────────────────────────
     // WordPress's upgrader calls deactivate_plugins() as part of its error
-    // recovery when an update fails mid-extraction (e.g. a file copy failure
-    // on another plugin in the same batch). This can deactivate plugins that
-    // were never part of the failing update — collateral deactivation.
+    // recovery when an update fails mid-extraction. This can deactivate plugins
+    // that were never part of the failing update (collateral deactivation).
     //
-    // We snapshot all active plugins before the update and compare after.
-    // Any plugin that was active before but is inactive after — and was NOT
-    // the plugin we just updated — is restored to active. This prevents one
-    // plugin's file-permission failure from silently deactivating unrelated
-    // plugins like Divi Machine.
-    $active_before = (array) get_option( 'active_plugins', [] );
+    // We persist the pre-batch snapshot as a transient keyed to the session ID
+    // so that retries also restore from the original pre-batch state — not from
+    // a post-deactivation state that's missing the collateral victims.
+    $snapshot_key  = 'wpmm_active_snapshot_' . md5( $session_id ?: 'default' );
+    $active_before = get_transient( $snapshot_key );
+    if ( false === $active_before ) {
+        // First request in this batch — take the snapshot now and persist it.
+        $active_before = (array) get_option( 'active_plugins', [] );
+        set_transient( $snapshot_key, $active_before, 30 * MINUTE_IN_SECONDS );
+    }
     // ─────────────────────────────────────────────────────────────────────────
 
     $GLOBALS['wpmm_session_id'] = $session_id;
@@ -98,20 +101,26 @@ function wpmm_ajax_run_update() {
 
     // ── Restore collaterally deactivated plugins ──────────────────────────────
     if ( $type === 'plugin' ) {
-        $active_after   = (array) get_option( 'active_plugins', [] );
-        $deactivated    = array_diff( $active_before, $active_after );
-        $to_restore     = array_filter( $deactivated, function( $p ) use ( $slug ) {
-            // Never restore the plugin we just updated — its state is intentional.
-            return $p !== $slug;
-        } );
+        $active_after = (array) get_option( 'active_plugins', [] );
+        $deactivated  = array_diff( $active_before, $active_after );
+        $to_restore   = array_values( array_filter(
+            $deactivated,
+            function( $p ) use ( $slug ) {
+                return $p !== $slug; // Never restore the plugin we just updated.
+            }
+        ) );
 
         if ( ! empty( $to_restore ) ) {
-            // Re-activate the collaterally deactivated plugins.
-            $restored = activate_plugins( array_values( $to_restore ), '', is_multisite() );
-            // Log the restoration so the admin can see what happened.
-            if ( ! is_wp_error( $restored ) ) {
-                $result['collateral_restored'] = array_values( $to_restore );
-            }
+            // Write directly to active_plugins — bypass activate_plugins() which
+            // runs dependency checks that can fail mid-batch when Divi or another
+            // dependency is in a mid-update state, causing silent restore failure.
+            $restored_list = array_unique( array_merge( $active_after, $to_restore ) );
+            sort( $restored_list );
+            update_option( 'active_plugins', $restored_list );
+            // Update the snapshot so subsequent restores in this batch reflect
+            // the corrected state rather than re-restoring already-active plugins.
+            set_transient( $snapshot_key, $restored_list, 30 * MINUTE_IN_SECONDS );
+            $result['collateral_restored'] = $to_restore;
         }
     }
     // ─────────────────────────────────────────────────────────────────────────

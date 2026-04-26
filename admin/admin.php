@@ -1015,6 +1015,52 @@ function wpmm_render_updates() {
                 </p>
             </div>
 
+            <!-- ── Backup Warning Modal ─────────────────────────────────── -->
+            <div id="wpmm-backup-modal" class="wpmm-modal wpmm-modal-closed" role="dialog"
+                 aria-modal="true" aria-labelledby="wpmm-backup-modal-title">
+                <div class="wpmm-modal-overlay"></div>
+                <div class="wpmm-modal-box" style="max-width:520px;">
+                    <div class="wpmm-modal-header" style="background:var(--wpmm-orange,#f97316);border-radius:8px 8px 0 0;">
+                        <span class="wpmm-modal-title" id="wpmm-backup-modal-title"
+                              style="display:flex;align-items:center;gap:10px;">
+                            <span class="dashicons dashicons-backup" style="font-size:22px;width:22px;height:22px;"></span>
+                            Back Up Before You Update
+                        </span>
+                    </div>
+                    <div class="wpmm-modal-body" style="padding:24px 28px;">
+                        <p style="font-size:15px;font-weight:600;margin:0 0 12px;color:var(--wpmm-text);">
+                            Have you backed up this website?
+                        </p>
+                        <p style="margin:0 0 14px;color:var(--wpmm-text-light,#64748b);line-height:1.6;">
+                            Plugin and theme updates can occasionally cause unexpected issues —
+                            conflicts, white screens, or broken layouts. A current backup means
+                            you can restore your site to its previous state if anything goes wrong.
+                        </p>
+                        <ul style="margin:0 0 20px 18px;color:var(--wpmm-text-light,#64748b);line-height:1.8;font-size:13px;">
+                            <li>Back up your database and files before continuing</li>
+                            <li>Test on a staging site first for major version updates</li>
+                            <li>Keep your hosting control panel open in case you need to restore</li>
+                        </ul>
+                        <p style="margin:0 0 24px;font-size:13px;color:var(--wpmm-gray,#94a3b8);">
+                            Greenskeeper does not create backups. Use your host&rsquo;s backup tool,
+                            Kinsta&rsquo;s manual backup, or a plugin such as UpdraftPlus before proceeding.
+                        </p>
+                        <div style="display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap;">
+                            <button type="button" id="wpmm-backup-cancel"
+                                    class="wpmm-btn wpmm-btn-secondary">
+                                Cancel — I need to back up first
+                            </button>
+                            <button type="button" id="wpmm-backup-confirm"
+                                    class="wpmm-btn wpmm-btn-primary">
+                                <span class="dashicons dashicons-yes-alt"></span>
+                                My site is backed up — proceed
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ── /Backup Warning Modal ────────────────────────────────── -->
+
             <!-- Progress bar — visible while a batch is running -->
             <div id="wpmm-global-progress" hidden>
                 <div class="wpmm-progress-wrap">
