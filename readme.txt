@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.0.8
+Stable tag:        2.0.9
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,18 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.0.9 =
+* Critical fix: HTTP 500 errors on managed hosting (Kinsta, WP Engine)
+  during plugin and theme updates. Root cause: wp_update_plugins() and
+  wp_update_themes() make loopback HTTP requests back to the WordPress.org
+  API. When called from within an AJAX request, these loopback requests
+  are blocked or time out on managed hosting, causing the outer AJAX
+  request to return HTTP 500. All blocking wp_update_plugins/themes()
+  calls during AJAX update requests have been replaced with a non-blocking
+  wp-cron background event (wpmm_refresh_update_transient) that fires
+  after the request completes. The upgrader proceeds with the existing
+  transient URL and the next retry benefits from the refreshed URL.
 
 = 2.0.8 =
 Critical fix: network-activated plugins (Site Kit, Sucuri, Clarity) restored after collateral deactivation.

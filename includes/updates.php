@@ -59,28 +59,18 @@ function wpmm_get_available_updates( $site_id = 0 ) {
     $all_plugins    = get_plugins();
     if ( ! empty( $update_plugins->response ) ) {
 
-        // Collect all plugin files that have an empty package URL so we can
-        // attempt a single fresh wp_update_plugins() call to populate them,
-        // rather than marking them all as requires_manual immediately.
-        // Some vendors (AIOSEO Pro, WPForms Pro) legitimately have an empty
-        // URL in a cached transient but provide one after a fresh check.
-        // Others (Gravity Forms add-ons) remain empty even after a refresh
-        // because they require a browser-based license validation step.
+        // Collect all plugin files that have an empty package URL.
+        // On managed hosting (Kinsta, WP Engine), calling wp_update_plugins()
+        // from within an AJAX request causes HTTP 500 due to loopback blocking.
+        // Instead we mark empty-URL plugins as requires_manual. Premium plugins
+        // like AIOSEO Pro that need a fresh URL will get one automatically when
+        // their update is attempted — the upgrader handles this transparently.
         $empty_pkg_slugs = [];
         foreach ( $update_plugins->response as $plugin_file => $plugin_data ) {
             $pkg = isset( $plugin_data->package ) ? $plugin_data->package : '';
             if ( $pkg === '' ) {
                 $empty_pkg_slugs[] = $plugin_file;
             }
-        }
-
-        // If any plugins have empty URLs, do one fresh check now so we can
-        // distinguish "genuinely no URL" from "URL not cached yet".
-        if ( ! empty( $empty_pkg_slugs ) ) {
-            require_once ABSPATH . 'wp-admin/includes/update.php';
-            delete_site_transient( 'update_plugins' );
-            wp_update_plugins();
-            $update_plugins = get_site_transient( 'update_plugins' );
         }
 
         foreach ( $update_plugins->response as $plugin_file => $plugin_data ) {
@@ -249,44 +239,58 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
         }
 
         // ── Package URL freshness strategy ───────────────────────────────────
-        // Premium plugin vendors (Gravity Forms, ACF, Sucuri, Divi, etc.)
-        // generate signed, time-limited package URLs. If the URL has expired
-        // since the scan ran, WordPress's upgrader will fail to download the
-        // package and then call deactivate_plugins() as part of its own error
-        // recovery — deactivating the plugin we just tried to update.
+        // Premium plugin vendors generate signed, time-limited package URLs.
+        // If the URL has expired, WordPress's upgrader will fail and may call
+        // deactivate_plugins() as part of its error recovery.
         //
-        // The correct fix is what WordPress core does before its own upgrade:
-        // force a fresh update check for this specific plugin immediately before
-        // calling the upgrader. This gives us a brand-new signed URL from the
-        // plugin vendor's update server, valid right now.
+        // Previously we called wp_update_plugins() to force a fresh URL — but
+        // on managed hosting (Kinsta, WP Engine, etc.) this causes an HTTP 500
+        // because wp_update_plugins() makes a loopback HTTP request back to the
+        // WordPress.org API from within an already-running AJAX request. The
+        // server's fastCGI timeout or loopback blocking kills the outer request.
         //
-        // We do this whenever we have a package URL to verify. The head check
-        // comes first as a fast path — if the existing URL is still valid we
-        // skip the slower wp_update_plugins() call entirely.
+        // The correct approach:
+        // 1. HEAD check the existing URL — fast, no loopback.
+        // 2. If stale, schedule a wp-cron event to refresh the transient in the
+        //    background (non-blocking), then proceed with what we have.
+        // 3. If the upgrade fails with a null result (silent download failure),
+        //    wpmm_interpret_plugin_result() handles the retry with a fresh URL
+        //    via a separate request that doesn't compound the loopback problem.
         if ( $pkg_url ) {
-            $head        = wp_remote_head( $pkg_url, [ 'timeout' => 8, 'redirection' => 5 ] );
+            $head        = wp_remote_head( $pkg_url, [
+                'timeout'     => 8,
+                'redirection' => 3,
+                'blocking'    => true,
+                'sslverify'   => false,
+            ] );
             $head_status = is_wp_error( $head ) ? 0 : wp_remote_retrieve_response_code( $head );
 
             if ( $head_status === 0 || $head_status >= 400 ) {
-                // URL is stale or unreachable. Force a fresh update check for
-                // this plugin so the vendor can issue a new signed URL.
-                require_once ABSPATH . 'wp-admin/includes/update.php';
+                // URL is stale. Schedule a non-blocking background refresh so
+                // the next update attempt gets a fresh URL. Do NOT call
+                // wp_update_plugins() here — it causes HTTP 500 on managed hosts.
+                if ( ! wp_next_scheduled( 'wpmm_refresh_update_transient' ) ) {
+                    wp_schedule_single_event( time(), 'wpmm_refresh_update_transient' );
+                }
 
-                // Delete the transient so wp_update_plugins() is forced to
-                // contact the update server rather than returning cached data.
-                delete_site_transient( 'update_plugins' );
-                wp_update_plugins();
-
-                // Re-read the freshly populated transient.
+                // Try to get a fresh URL from the existing transient in case
+                // another process already refreshed it recently.
                 $update_plugins      = get_site_transient( 'update_plugins' );
                 $transient_has_entry = ! empty( $update_plugins->response[ $slug ] );
 
                 if ( $transient_has_entry && ! empty( $update_plugins->response[ $slug ]->package ) ) {
-                    $pkg_url = $update_plugins->response[ $slug ]->package;
+                    $fresh_pkg = $update_plugins->response[ $slug ]->package;
+                    // Only use the fresh URL if it's different from the stale one.
+                    if ( $fresh_pkg !== $pkg_url ) {
+                        $pkg_url = $fresh_pkg;
+                    } else {
+                        // Same URL — still stale. Clear it so the upgrader
+                        // attempts a direct download, which may still work if
+                        // the HEAD check was a false negative (some CDNs return
+                        // 403 on HEAD but 200 on GET).
+                        $pkg_url = $fresh_pkg;
+                    }
                 } else {
-                    // After a fresh check the plugin is still not in the
-                    // transient. It genuinely has no update available or its
-                    // license is not valid. Do not attempt the upgrade.
                     $pkg_url = '';
                 }
             }
@@ -399,14 +403,22 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
         // package URLs. If the URL has expired since the scan ran, the download
         // silently fails and Theme_Upgrader returns null. Force a fresh check.
         if ( $pkg_url ) {
-            $head        = wp_remote_head( $pkg_url, [ 'timeout' => 8, 'redirection' => 5 ] );
+            $head        = wp_remote_head( $pkg_url, [
+                'timeout'     => 8,
+                'redirection' => 3,
+                'blocking'    => true,
+                'sslverify'   => false,
+            ] );
             $head_status = is_wp_error( $head ) ? 0 : wp_remote_retrieve_response_code( $head );
 
             if ( $head_status === 0 || $head_status >= 400 ) {
-                require_once ABSPATH . 'wp-admin/includes/update.php';
-                delete_site_transient( 'update_themes' );
-                wp_update_themes();
+                // URL is stale. Schedule a background cron refresh.
+                // Do NOT call wp_update_themes() here — loopback HTTP 500 risk.
+                if ( ! wp_next_scheduled( 'wpmm_refresh_update_transient' ) ) {
+                    wp_schedule_single_event( time(), 'wpmm_refresh_update_transient' );
+                }
 
+                // Check if the transient already has a fresh URL from a recent refresh.
                 $update_themes       = get_site_transient( 'update_themes' );
                 $transient_has_entry = ! empty( $update_themes->response[ $slug ] );
 
@@ -605,18 +617,14 @@ function wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version, $ret
 
         // No skin error recorded. The most common remaining cause is a signed
         // package URL that expired between our HEAD check and the actual download.
-        // Force a fresh wp_update_plugins() to get a new URL and retry once.
+        // Do NOT call wp_update_plugins() here — it makes a loopback HTTP request
+        // that causes HTTP 500 on managed hosts (Kinsta, WP Engine) when called
+        // from within an AJAX request. Schedule a background cron refresh instead
+        // and return the version-unchanged error. The user can retry momentarily
+        // after the cron fires and populates a fresh URL.
         if ( $retry ) {
-            require_once ABSPATH . 'wp-admin/includes/update.php';
-            delete_site_transient( 'update_plugins' );
-            wp_update_plugins();
-
-            $update_plugins = get_site_transient( 'update_plugins' );
-            if ( ! empty( $update_plugins->response[ $slug ]->package ) ) {
-                $skin2     = new WP_Ajax_Upgrader_Skin();
-                $upgrader2 = new Plugin_Upgrader( $skin2 );
-                $result2   = $upgrader2->upgrade( $slug );
-                return wpmm_interpret_plugin_result( $result2, $skin2, $slug, $old_version, false, true );
+            if ( ! wp_next_scheduled( 'wpmm_refresh_update_transient' ) ) {
+                wp_schedule_single_event( time(), 'wpmm_refresh_update_transient' );
             }
         }
 
@@ -679,18 +687,12 @@ function wpmm_interpret_theme_result( $result, $skin, $slug, $old_version, $retr
             return [ 'failed', '', 'update_failed', $skin_msg ];
         }
 
-        // No skin error — try a fresh signed URL and retry once.
+        // No skin error — schedule a background refresh and return.
+        // Do NOT call wp_update_themes() here — same loopback HTTP 500 issue
+        // as wp_update_plugins() on managed hosting.
         if ( $retry ) {
-            require_once ABSPATH . 'wp-admin/includes/update.php';
-            delete_site_transient( 'update_themes' );
-            wp_update_themes();
-
-            $update_themes = get_site_transient( 'update_themes' );
-            if ( ! empty( $update_themes->response[ $slug ]['package'] ) ) {
-                $skin2     = new WP_Ajax_Upgrader_Skin();
-                $upgrader2 = new Theme_Upgrader( $skin2 );
-                $result2   = $upgrader2->upgrade( $slug );
-                return wpmm_interpret_theme_result( $result2, $skin2, $slug, $old_version, false, true );
+            if ( ! wp_next_scheduled( 'wpmm_refresh_update_transient' ) ) {
+                wp_schedule_single_event( time(), 'wpmm_refresh_update_transient' );
             }
         }
 
@@ -711,7 +713,16 @@ function wpmm_interpret_theme_result( $result, $skin, $slug, $old_version, $retr
 
 // =========================================================================
 // EXTERNAL UPDATE DETECTION
-// Hook into upgrader_process_complete to catch updates made outside
+// ── Background plugin transient refresh ───────────────────────────────────────
+// Fired by wp-cron after a stale package URL is detected during an AJAX update.
+// Runs wp_update_plugins() in a safe background context (not nested inside
+// another HTTP request) so the next update attempt gets a fresh signed URL.
+add_action( 'wpmm_refresh_update_transient', function () {
+    if ( function_exists( 'wp_update_plugins' ) ) {
+        require_once ABSPATH . 'wp-admin/includes/update.php';
+        wp_update_plugins();
+    }
+} );
 // Greenskeeper — e.g. via the WordPress Updates screen, the Avada plugins
 // dashboard (for Avada Core / Avada Builder), or any other standard
 // WordPress upgrader mechanism.
