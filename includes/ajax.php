@@ -79,8 +79,20 @@ function wpmm_ajax_run_update() {
     // ── Active plugin snapshot ────────────────────────────────────────────────
     // IMPORTANT: snapshot must be taken BEFORE switch_to_blog() so we capture
     // the true network state. After switch_to_blog(), get_option('active_plugins')
-    // returns the sub-site's plugin list, not the main site's. We need the full
-    // pre-update state from the correct context.
+    // returns the sub-site's plugin list, not the main site's.
+    //
+    // On multisite, plugins can be active in THREE places:
+    //   active_sitewide_plugins — network option (network/sitewide activation)
+    //   active_plugins on blog 1 — primary site's per-site activations
+    //   active_plugins on blog N — each sub-site's per-site activations
+    //
+    // CPTUI and similar plugins activated only on a specific sub-site are stored
+    // in THAT sub-site's active_plugins option — a completely separate database
+    // row. Previous versions only snapshotted blog 1's active_plugins and missed
+    // all sub-site-specific activations entirely.
+    //
+    // We snapshot ALL sites' active_plugins on multisite so any sub-site plugin
+    // deactivated as collateral damage can be detected and restored.
     //
     // We use get_site_transient/set_site_transient (network-level) rather than
     // get_transient/set_transient (per-blog) because per-blog transients are
@@ -89,16 +101,31 @@ function wpmm_ajax_run_update() {
     $snapshot_key = 'wpmm_active_snapshot_' . md5( $session_id ?: 'default' );
     $snapshot     = get_site_transient( $snapshot_key );
     if ( false === $snapshot ) {
+        // Build per-site active_plugins map: [ blog_id => [ plugin slugs ] ]
+        $per_site_active = [];
+        if ( is_multisite() ) {
+            $sites = get_sites( [ 'number' => 200, 'fields' => 'ids' ] );
+            foreach ( $sites as $bid ) {
+                switch_to_blog( $bid );
+                $per_site_active[ $bid ] = (array) get_option( 'active_plugins', [] );
+                restore_current_blog();
+            }
+        } else {
+            $per_site_active[1] = (array) get_option( 'active_plugins', [] );
+        }
+
         $snapshot = [
             'active_plugins'          => (array) get_option( 'active_plugins', [] ),
             'active_sitewide_plugins' => is_multisite()
                 ? (array) get_site_option( 'active_sitewide_plugins', [] )
                 : [],
+            'per_site_active'         => $per_site_active,
         ];
         set_site_transient( $snapshot_key, $snapshot, 30 * MINUTE_IN_SECONDS );
     }
-    $active_before   = $snapshot['active_plugins'];
-    $sitewide_before = $snapshot['active_sitewide_plugins'];
+    $active_before     = $snapshot['active_plugins'];
+    $sitewide_before   = $snapshot['active_sitewide_plugins'];
+    $per_site_before   = $snapshot['per_site_active'] ?? [];
     // ─────────────────────────────────────────────────────────────────────────
 
     $switched = false;
@@ -128,7 +155,7 @@ function wpmm_ajax_run_update() {
 
         $restored = [];
 
-        // Restore site-level plugins.
+        // Restore primary site-level plugins.
         $deactivated = array_diff( $active_before, $active_after );
         $to_restore  = array_values( array_filter( $deactivated, function( $p ) use ( $slug ) {
             return $p !== $slug;
@@ -157,12 +184,47 @@ function wpmm_ajax_run_update() {
             $new_sitewide = $sitewide_after;
         }
 
+        // Restore per-site active plugins across ALL sub-sites.
+        // Plugins activated only on a specific sub-site (not network-activated)
+        // are stored in that sub-site's own active_plugins option. CPTUI is a
+        // common example — active on one sub-site, not network-activated.
+        $new_per_site = $per_site_before;
+        if ( is_multisite() && ! empty( $per_site_before ) ) {
+            foreach ( $per_site_before as $bid => $plugins_before ) {
+                switch_to_blog( $bid );
+                $plugins_after = (array) get_option( 'active_plugins', [] );
+                restore_current_blog();
+
+                $site_deactivated = array_diff( $plugins_before, $plugins_after );
+                $site_to_restore  = array_values( array_filter(
+                    $site_deactivated,
+                    function( $p ) use ( $slug ) { return $p !== $slug; }
+                ) );
+
+                if ( ! empty( $site_to_restore ) ) {
+                    $new_site_active = array_unique( array_merge( $plugins_after, $site_to_restore ) );
+                    sort( $new_site_active );
+                    switch_to_blog( $bid );
+                    update_option( 'active_plugins', $new_site_active );
+                    restore_current_blog();
+                    $new_per_site[ $bid ] = $new_site_active;
+                    $restored = array_merge( $restored, array_map( function( $p ) use ( $bid ) {
+                        return 'blog:' . $bid . ':' . $p;
+                    }, $site_to_restore ) );
+                }
+            }
+        }
+
         if ( ! empty( $restored ) ) {
             set_site_transient( $snapshot_key, [
                 'active_plugins'          => $new_active,
                 'active_sitewide_plugins' => $new_sitewide,
+                'per_site_active'         => $new_per_site,
             ], 30 * MINUTE_IN_SECONDS );
-            $result['collateral_restored'] = $restored;
+            // Format restored list for UI display — strip blog: prefix for readability.
+            $result['collateral_restored'] = array_map( function( $p ) {
+                return preg_replace( '/^blog:\d+:/', '', $p );
+            }, $restored );
         }
     }
     // ─────────────────────────────────────────────────────────────────────────

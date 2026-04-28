@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.1.0
+Stable tag:        2.1.1
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,18 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.1.1 =
+* Fix: Plugins activated only on a specific sub-site (not network-activated)
+  could still be deactivated by collateral damage during updates. Previous
+  versions only snapshotted the primary site's active_plugins and the network
+  active_sitewide_plugins — missing plugins like Custom Post Type UI that are
+  activated per-site on individual sub-sites. The snapshot now reads
+  active_plugins from every site in the network. The restore checks each
+  sub-site's current active_plugins against its snapshot and re-activates
+  any plugin that was deactivated as collateral damage. The updated snapshot
+  is persisted back to the network transient so retries also have access to
+  the corrected per-site state.
 
 = 2.1.0 =
 * Critical fix: network-activated plugins (AIOSEO, Co-Authors Plus,
