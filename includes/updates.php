@@ -338,10 +338,17 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
                 $t->response[ $slug ]        = $injected_entry;
                 set_site_transient( 'update_plugins', $t );
 
-                $upgrader = new Plugin_Upgrader( $skin );
-                $result   = $upgrader->upgrade( $slug );
-                list( $status, $new_version, $error_code, $message ) =
-                    wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version );
+                try {
+                    $upgrader = new Plugin_Upgrader( $skin );
+                    $result   = $upgrader->upgrade( $slug );
+                    list( $status, $new_version, $error_code, $message ) =
+                        wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version );
+                } catch ( \Throwable $e ) {
+                    $error_code = 'update_failed';
+                    $message    = 'Update failed due to an error in the plugin\'s own updater: '
+                                . $e->getMessage()
+                                . ' (This is a bug in the plugin, not in Greenskeeper. Try updating via Dashboard → Updates.)';
+                }
 
                 // Clean up the injected entry regardless of outcome.
                 $t2 = get_site_transient( 'update_plugins' );
@@ -360,22 +367,29 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
             // The plugin's active/inactive state is preserved. This is the same
             // method WordPress core uses on its own Updates screen.
             //
-            // By this point the freshness strategy above has already verified the
-            // package URL and refreshed the transient if needed, so we can
-            // proceed directly to the upgrade.
-            $upgrader = new Plugin_Upgrader( $skin );
-            $result   = $upgrader->upgrade( $slug );
-            list( $status, $new_version, $error_code, $message ) =
-                wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version );
+            // Wrapped in try/catch: some premium plugins (e.g. WP Offload Media Pro)
+            // use custom updater libraries that can throw ValueError or other
+            // exceptions when called in a programmatic context. We catch all
+            // Throwable so a bug in a plugin's own updater code does not kill
+            // our AJAX request with HTTP 500.
+            try {
+                $upgrader = new Plugin_Upgrader( $skin );
+                $result   = $upgrader->upgrade( $slug );
+                list( $status, $new_version, $error_code, $message ) =
+                    wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version );
 
-            if ( $status === 'success' ) {
-                // Surgically remove this item from the transient so the next
-                // plugin in the batch still finds its own entry intact.
-                $t = get_site_transient( 'update_plugins' );
-                if ( $t && isset( $t->response[ $slug ] ) ) {
-                    unset( $t->response[ $slug ] );
-                    set_site_transient( 'update_plugins', $t );
+                if ( $status === 'success' ) {
+                    $t = get_site_transient( 'update_plugins' );
+                    if ( $t && isset( $t->response[ $slug ] ) ) {
+                        unset( $t->response[ $slug ] );
+                        set_site_transient( 'update_plugins', $t );
+                    }
                 }
+            } catch ( \Throwable $e ) {
+                $error_code = 'update_failed';
+                $message    = 'Update failed due to an error in the plugin\'s own updater: '
+                            . $e->getMessage()
+                            . ' (This is a bug in the plugin, not in Greenskeeper. Try updating via Dashboard → Updates.)';
             }
         }
 
@@ -457,10 +471,17 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
                 ];
                 set_site_transient( 'update_themes', $t );
 
-                $upgrader = new Theme_Upgrader( $skin );
-                $result   = $upgrader->upgrade( $slug );
-                list( $status, $new_version, $error_code, $message ) =
-                    wpmm_interpret_theme_result( $result, $skin, $slug, $old_version );
+                try {
+                    $upgrader = new Theme_Upgrader( $skin );
+                    $result   = $upgrader->upgrade( $slug );
+                    list( $status, $new_version, $error_code, $message ) =
+                        wpmm_interpret_theme_result( $result, $skin, $slug, $old_version );
+                } catch ( \Throwable $e ) {
+                    $error_code = 'update_failed';
+                    $message    = 'Update failed due to an error in the theme\'s own updater: '
+                                . $e->getMessage()
+                                . ' (Try updating via Dashboard → Updates.)';
+                }
 
                 // Clean up injected entry.
                 $t2 = get_site_transient( 'update_themes' );
@@ -474,19 +495,25 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
             }
         } else {
             // Theme_Upgrader::upgrade() updates the theme files on disk.
-            // It does NOT change which theme is active. This is the same method
-            // WordPress core uses on its own Updates screen.
-            $upgrader = new Theme_Upgrader( $skin );
-            $result   = $upgrader->upgrade( $slug );
-            list( $status, $new_version, $error_code, $message ) =
-                wpmm_interpret_theme_result( $result, $skin, $slug, $old_version );
+            // It does NOT change which theme is active.
+            try {
+                $upgrader = new Theme_Upgrader( $skin );
+                $result   = $upgrader->upgrade( $slug );
+                list( $status, $new_version, $error_code, $message ) =
+                    wpmm_interpret_theme_result( $result, $skin, $slug, $old_version );
 
-            if ( $status === 'success' ) {
-                $t = get_site_transient( 'update_themes' );
-                if ( $t && isset( $t->response[ $slug ] ) ) {
-                    unset( $t->response[ $slug ] );
-                    set_site_transient( 'update_themes', $t );
+                if ( $status === 'success' ) {
+                    $t = get_site_transient( 'update_themes' );
+                    if ( $t && isset( $t->response[ $slug ] ) ) {
+                        unset( $t->response[ $slug ] );
+                        set_site_transient( 'update_themes', $t );
+                    }
                 }
+            } catch ( \Throwable $e ) {
+                $error_code = 'update_failed';
+                $message    = 'Update failed due to an error in the theme\'s own updater: '
+                            . $e->getMessage()
+                            . ' (Try updating via Dashboard → Updates.)';
             }
         }
     }

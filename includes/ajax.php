@@ -104,11 +104,19 @@ function wpmm_ajax_run_update() {
         // Build per-site active_plugins map: [ blog_id => [ plugin slugs ] ]
         $per_site_active = [];
         if ( is_multisite() ) {
-            $sites = get_sites( [ 'number' => 200, 'fields' => 'ids' ] );
-            foreach ( $sites as $bid ) {
-                switch_to_blog( $bid );
-                $per_site_active[ $bid ] = (array) get_option( 'active_plugins', [] );
+            try {
+                $sites = get_sites( [ 'number' => 200, 'fields' => 'ids' ] );
+                foreach ( $sites as $bid ) {
+                    switch_to_blog( (int) $bid );
+                    $per_site_active[ (int) $bid ] = (array) get_option( 'active_plugins', [] );
+                    restore_current_blog();
+                }
+            } catch ( \Throwable $e ) {
+                // If the per-site loop fails on a specific multisite configuration,
+                // fall back gracefully — the primary site and sitewide snapshots
+                // still provide partial protection.
                 restore_current_blog();
+                $per_site_active = [];
             }
         } else {
             $per_site_active[1] = (array) get_option( 'active_plugins', [] );
@@ -185,33 +193,34 @@ function wpmm_ajax_run_update() {
         }
 
         // Restore per-site active plugins across ALL sub-sites.
-        // Plugins activated only on a specific sub-site (not network-activated)
-        // are stored in that sub-site's own active_plugins option. CPTUI is a
-        // common example — active on one sub-site, not network-activated.
         $new_per_site = $per_site_before;
         if ( is_multisite() && ! empty( $per_site_before ) ) {
-            foreach ( $per_site_before as $bid => $plugins_before ) {
-                switch_to_blog( $bid );
-                $plugins_after = (array) get_option( 'active_plugins', [] );
-                restore_current_blog();
-
-                $site_deactivated = array_diff( $plugins_before, $plugins_after );
-                $site_to_restore  = array_values( array_filter(
-                    $site_deactivated,
-                    function( $p ) use ( $slug ) { return $p !== $slug; }
-                ) );
-
-                if ( ! empty( $site_to_restore ) ) {
-                    $new_site_active = array_unique( array_merge( $plugins_after, $site_to_restore ) );
-                    sort( $new_site_active );
-                    switch_to_blog( $bid );
-                    update_option( 'active_plugins', $new_site_active );
+            try {
+                foreach ( $per_site_before as $bid => $plugins_before ) {
+                    switch_to_blog( (int) $bid );
+                    $plugins_after = (array) get_option( 'active_plugins', [] );
                     restore_current_blog();
-                    $new_per_site[ $bid ] = $new_site_active;
-                    $restored = array_merge( $restored, array_map( function( $p ) use ( $bid ) {
-                        return 'blog:' . $bid . ':' . $p;
-                    }, $site_to_restore ) );
+
+                    $site_deactivated = array_diff( $plugins_before, $plugins_after );
+                    $site_to_restore  = array_values( array_filter(
+                        $site_deactivated,
+                        function( $p ) use ( $slug ) { return $p !== $slug; }
+                    ) );
+
+                    if ( ! empty( $site_to_restore ) ) {
+                        $new_site_active = array_unique( array_merge( $plugins_after, $site_to_restore ) );
+                        sort( $new_site_active );
+                        switch_to_blog( (int) $bid );
+                        update_option( 'active_plugins', $new_site_active );
+                        restore_current_blog();
+                        $new_per_site[ (int) $bid ] = $new_site_active;
+                        $restored = array_merge( $restored, array_map( function( $p ) use ( $bid ) {
+                            return 'blog:' . $bid . ':' . $p;
+                        }, $site_to_restore ) );
+                    }
                 }
+            } catch ( \Throwable $e ) {
+                restore_current_blog();
             }
         }
 

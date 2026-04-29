@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.1.1
+Stable tag:        2.1.2
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,19 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.1.2 =
+* Fix: HTTP 500 errors on some multisite networks caused by the per-site
+  snapshot loop introduced in v2.1.1. Both the snapshot and restore loops
+  are now wrapped in try/catch blocks for graceful fallback.
+* Fix: HTTP 500 caused by premium plugins with custom updater libraries
+  (e.g. WP Offload Media Pro / Delicious Brains updater) throwing ValueError
+  or other exceptions during Plugin_Upgrader::upgrade(). All four upgrader
+  calls (plugin normal path, plugin injected-entry path, theme normal path,
+  theme injected-entry path) are now wrapped in try/catch Throwable blocks.
+  When a plugin's own updater throws an exception, Greenskeeper catches it
+  and returns a descriptive error message rather than an HTTP 500, directing
+  the user to update via Dashboard → Updates as a fallback.
 
 = 2.1.1 =
 * Fix: Plugins activated only on a specific sub-site (not network-activated)
