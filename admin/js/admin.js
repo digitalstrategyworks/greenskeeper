@@ -532,18 +532,33 @@ jQuery(function ($) {
                         .addClass('wpmm-btn-success')
                         .removeClass('wpmm-btn-primary')
                         .prop('disabled', true);
-                    var successHtml = '<span class="wpmm-status-success">&#9989; Update Successful</span>';
-                    // If other plugins were collaterally deactivated by WordPress's
-                    // error recovery and Greenskeeper restored them, show a notice.
-                    if (res.data.collateral_restored && res.data.collateral_restored.length) {
-                        successHtml += '<div class="wpmm-status-warning" style="color:#b45309;margin-top:4px;font-size:12px;">' +
-                            '&#9888; WordPress deactivated ' + res.data.collateral_restored.length +
-                            ' other plugin(s) during this update — Greenskeeper restored them: ' +
-                            res.data.collateral_restored.map(function(p){ return escHtml(p); }).join(', ') +
-                            '</div>';
-                    }
-                    $status.html(successHtml);
+                    $status.html('<span class="wpmm-status-success">&#9989; Update Successful</span>');
                     $li.find('.wpmm-item-meta').text('Updated to version ' + res.data.new_version);
+
+                    // If plugins were collaterally deactivated and restored, show
+                    // a compact notice in a dedicated full-width row BELOW the item
+                    // so it never wraps or pushes the Updated button to multiple lines.
+                    if (res.data.collateral_restored && res.data.collateral_restored.length) {
+                        var names = res.data.collateral_restored.map(function(p) {
+                            // Show just the plugin folder name, not the full path.
+                            return escHtml(p.replace(/\/.*$/, ''));
+                        }).join(', ');
+                        var $notice = $(
+                            '<li class="wpmm-item wpmm-collateral-notice" style="' +
+                            'background:#fffbeb;border-left:3px solid #f59e0b;padding:6px 16px;' +
+                            'font-size:12px;color:#92400e;display:flex;align-items:center;gap:6px;">' +
+                            '<span class="dashicons dashicons-warning" style="color:#f59e0b;font-size:14px;width:14px;height:14px;"></span>' +
+                            '<span>WordPress deactivated ' + res.data.collateral_restored.length +
+                            ' plugin(s) during this update — Greenskeeper restored: <strong>' +
+                            names + '</strong></span>' +
+                            '</li>'
+                        );
+                        $li.after($notice);
+                        // Fade the notice out after 12 seconds so it doesn't clutter the list.
+                        setTimeout(function () {
+                            $notice.fadeOut(600, function () { $notice.remove(); });
+                        }, 12000);
+                    }
                 } else {
                     var msg = '';
                     if (res.data && typeof res.data === 'object' && res.data.message) {

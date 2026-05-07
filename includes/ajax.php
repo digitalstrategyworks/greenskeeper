@@ -173,6 +173,25 @@ function wpmm_ajax_run_update() {
             sort( $new_active );
             update_option( 'active_plugins', $new_active );
             $restored = array_merge( $restored, $to_restore );
+
+            // Some plugins (WooCommerce, WP Rocket, etc.) register deactivation
+            // hooks that interfere with direct option writes. For these, also call
+            // activate_plugin() to fire their activation hooks properly and ensure
+            // they are fully re-initialized after collateral deactivation.
+            $hook_sensitive = array_filter( $to_restore, function( $p ) {
+                $hook_plugins = [ 'woocommerce', 'wp-rocket', 'wordfence', 'really-simple-ssl' ];
+                foreach ( $hook_plugins as $known ) {
+                    if ( strpos( $p, $known ) !== false ) {
+                        return true;
+                    }
+                }
+                return false;
+            } );
+            foreach ( $hook_sensitive as $p ) {
+                if ( ! is_plugin_active( $p ) ) {
+                    activate_plugin( $p, '', is_multisite() );
+                }
+            }
         } else {
             $new_active = $active_after;
         }
@@ -429,19 +448,22 @@ function wpmm_ajax_send_email() {
     $result = wpmm_send_email( $to, $subject, $body, $admin_id );
 
     if ( $result['success'] ) {
-        // Clear the pending sessions list now that the email has been sent.
-        // This ensures the next batch of updates starts a fresh accumulation.
-        if ( ! $posted_session ) {
-            delete_option( 'wpmm_pending_sessions' );
-        }
+        // Always clear pending sessions after a successful send regardless of
+        // whether this was a single-session or multi-session send. This ensures
+        // the next batch starts fresh accumulation and prevents stale sessions
+        // from appearing in subsequent email reports.
+        delete_option( 'wpmm_pending_sessions' );
 
         // Return enough data for the JS to prepend a new row to the history
         // table immediately without a page reload.
+        // Use a timestamp-based fallback row ID if the DB insert_id is 0
+        // (can happen when the email_log table is in a different blog context).
+        $row_id = ! empty( $result['email_id'] ) ? $result['email_id'] : ( 'ts-' . time() );
         wp_send_json_success( [
             'message'    => 'Email sent successfully.',
             'email_id'   => $result['email_id'],
             'row'        => [
-                'id'      => $result['email_id'],
+                'id'      => $row_id,
                 'sent_at' => current_time( 'mysql' ),
                 'to'      => $to,
                 'subject' => $subject,

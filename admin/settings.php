@@ -461,7 +461,7 @@ function wpmm_render_settings() {
                             <span id="wpmm-api-key-msg" class="wpmm-save-feedback"></span>
                         </div>
 
-                        <?php if ( $api_key ) : ?>
+                        <?php if ( $api_key_set ) : ?>
                         <div class="wpmm-api-endpoints" style="margin-top:16px;background:#f8fafc;border:1px solid var(--wpmm-border);border-radius:6px;padding:14px 16px;">
                             <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:var(--wpmm-blue);text-transform:uppercase;letter-spacing:.05em;">Available Endpoints</p>
                             <?php

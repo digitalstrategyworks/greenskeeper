@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.1.3
+Stable tag:        2.1.4
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,26 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.1.4 =
+* Fix: PHP Warning "Undefined variable $api_key" on the Settings page.
+  The variable was renamed to $api_key_set in v2.0.5 but one reference
+  in the REST API endpoints section was not updated.
+* Fix: Email reports only showing the most recent session when multiple
+  unsent sessions exist. The pending sessions list is now always cleared
+  after any successful send, regardless of whether it was triggered from
+  the Updates page or the Email Reports page.
+* Fix: WooCommerce and other hook-sensitive plugins (WP Rocket, Wordfence,
+  Really Simple SSL) not fully restored after collateral deactivation.
+  These plugins register activation hooks that are bypassed by direct
+  option writes. After the option write, activate_plugin() is now called
+  for any hook-sensitive plugin in the restore list to ensure their
+  activation hooks fire and they are fully re-initialized.
+* Fix: Sent Email History row not appearing after send when the email
+  log database insert returns ID 0 (can occur on multisite when the
+  email_log table is in a different blog context). A timestamp-based
+  fallback row ID is now used when email_id is 0, ensuring the row
+  always appears immediately in the history table.
 
 = 2.1.3 =
 * Fix: HTTP 500 errors on some multisite networks caused by the per-site
