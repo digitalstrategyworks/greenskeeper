@@ -28,13 +28,18 @@ define( 'WPMM_SLUG_SPAM',        'wpmm-spam-log' );
  * only the four labelled submenu items are visible.
  */
 function wpmm_build_menus( $cap ) {
+    // Golf flag SVG icon — matches the Greenskeeper logo mark.
+    // WordPress colours menu icons using CSS filter/opacity, so the SVG
+    // must use black fill/stroke; WP applies its own colour transforms.
+    $menu_icon = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSI+CiAgPGxpbmUgeDE9IjYiIHkxPSIyIiB4Mj0iNiIgeTI9IjE2IiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBvbHlnb24gcG9pbnRzPSI2LDIgMTQsNSA2LDgiIGZpbGw9ImJsYWNrIi8+CiAgPGVsbGlwc2UgY3g9IjciIGN5PSIxNyIgcng9IjQiIHJ5PSIxLjUiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMS41IiBmaWxsPSJub25lIi8+Cjwvc3ZnPg==';
+
     add_menu_page(
         'Greenskeeper',
         'Greenskeeper',
         $cap,
         WPMM_SLUG_PARENT,
         'wpmm_render_no_page',
-        'dashicons-shield-alt',
+        $menu_icon,
         81
     );
 
