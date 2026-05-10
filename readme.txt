@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.1.4
+Stable tag:        2.1.5
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,24 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.1.5 =
+* Fix: iThemes Security Pro, Google Site Kit, and ShortPixel Image
+  Optimizer were being deactivated after updates and not restored.
+  These plugins intentionally self-deactivate during their update
+  process via their own upgrader_process_complete hooks, then expect
+  the updater to re-activate them afterward. The previous snapshot/
+  restore approach ran before these self-deactivation hooks fired and
+  therefore could not catch them.
+  Added a new wpmm_post_update_reactivate() hook on
+  upgrader_process_complete at priority 99 — deliberately very late
+  so it runs after all plugin-specific hooks. It has two jobs:
+  (1) Re-activate the plugin that Greenskeeper just updated if it
+  ended up inactive after its own hooks ran; (2) Restore any other
+  plugin that was active before the update but is now inactive as
+  collateral damage. Uses is_plugin_active_for_network() on multisite
+  to correctly handle network-activated vs site-activated plugins,
+  and activate_plugin($slug, '', $is_network) accordingly.
 
 = 2.1.4 =
 * Fix: PHP Warning "Undefined variable $api_key" on the Settings page.

@@ -750,6 +750,98 @@ add_action( 'wpmm_refresh_update_transient', function () {
         wp_update_plugins();
     }
 } );
+
+// ── Post-update plugin re-activation ──────────────────────────────────────────
+// Fires at priority 99 — deliberately very late so we run AFTER plugin-specific
+// hooks (iThemes Security Pro, Google Site Kit, ShortPixel, etc.) that
+// self-deactivate during their update process.
+//
+// Two jobs:
+//   1. Re-activate the plugin Greenskeeper just updated if it ended up inactive
+//      (some plugins intentionally deactivate themselves during their update and
+//      expect the updater to re-activate them afterward).
+//   2. Restore any other plugin that was active before but is now inactive as
+//      collateral damage — catches cases the AJAX snapshot/restore misses when
+//      self-deactivation happens after the restore window closes.
+//
+// Only fires when Greenskeeper triggered the update ($GLOBALS['wpmm_session_id']).
+add_action( 'upgrader_process_complete', 'wpmm_post_update_reactivate', 99, 2 );
+
+function wpmm_post_update_reactivate( $upgrader, $hook_extra ) {
+    // Only act on Greenskeeper-triggered updates.
+    if ( empty( $GLOBALS['wpmm_session_id'] ) ) {
+        return;
+    }
+
+    // Only handle plugin updates.
+    if ( ( $hook_extra['type'] ?? '' ) !== 'plugin' || ( $hook_extra['action'] ?? '' ) !== 'update' ) {
+        return;
+    }
+
+    // Determine which plugin was just updated.
+    $slug = '';
+    if ( ! empty( $hook_extra['plugin'] ) ) {
+        $slug = $hook_extra['plugin'];
+    } elseif ( ! empty( $hook_extra['plugins'] ) ) {
+        $plugins = (array) $hook_extra['plugins'];
+        $slug    = $plugins[0] ?? '';
+    } elseif ( method_exists( $upgrader, 'plugin_info' ) ) {
+        $slug = $upgrader->plugin_info() ?: '';
+    }
+
+    if ( ! $slug ) {
+        return;
+    }
+
+    if ( ! function_exists( 'is_plugin_active' ) ) {
+        require_once ABSPATH . 'wp-admin/includes/plugin.php';
+    }
+
+    // ── Job 1: Re-activate the updated plugin if it self-deactivated ─────────
+    $is_network = is_multisite() && is_plugin_active_for_network( $slug );
+    $is_active  = $is_network || is_plugin_active( $slug );
+
+    if ( ! $is_active ) {
+        // The plugin deactivated itself during its update hooks.
+        // Re-activate it — this is the standard WordPress pattern for plugins
+        // like iThemes Security Pro, Google Site Kit, and ShortPixel that
+        // intentionally self-deactivate and expect the updater to re-activate.
+        activate_plugin( $slug, '', $is_network );
+    }
+
+    // ── Job 2: Restore collateral victims from the snapshot ───────────────────
+    $snapshot_key = 'wpmm_active_snapshot_' . md5( $GLOBALS['wpmm_session_id'] );
+    $snapshot     = get_site_transient( $snapshot_key );
+    if ( ! $snapshot ) {
+        return;
+    }
+
+    // Restore site-level collateral victims.
+    $active_before = $snapshot['active_plugins'] ?? [];
+    $active_now    = (array) get_option( 'active_plugins', [] );
+    $deactivated   = array_diff( $active_before, $active_now );
+    $to_restore    = array_values( array_filter( $deactivated, function( $p ) use ( $slug ) {
+        return $p !== $slug;
+    } ) );
+    if ( ! empty( $to_restore ) ) {
+        $new_active = array_unique( array_merge( $active_now, $to_restore ) );
+        sort( $new_active );
+        update_option( 'active_plugins', $new_active );
+    }
+
+    // Restore network-activated collateral victims.
+    if ( is_multisite() ) {
+        $sitewide_before = $snapshot['active_sitewide_plugins'] ?? [];
+        $sitewide_now    = (array) get_site_option( 'active_sitewide_plugins', [] );
+        $sw_deactivated  = array_diff_key( $sitewide_before, $sitewide_now );
+        unset( $sw_deactivated[ $slug ] );
+        if ( ! empty( $sw_deactivated ) ) {
+            update_site_option( 'active_sitewide_plugins',
+                array_merge( $sitewide_now, $sw_deactivated ) );
+        }
+    }
+}
+
 // Greenskeeper — e.g. via the WordPress Updates screen, the Avada plugins
 // dashboard (for Avada Core / Avada Builder), or any other standard
 // WordPress upgrader mechanism.
