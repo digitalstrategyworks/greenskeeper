@@ -75,10 +75,13 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
         $html = '';
         foreach ( $entries as $entry ) {
             $success = isset( $entry->status ) && $entry->status === 'success';
-            $icon    = $success ? '&#9989;' : '&#10060;';
-            $badge   = $success
+            $icon    = $success ? '&#9989;' : '&#9888;';
+
+            // Status badge — success stays green; failures use amber to avoid
+            // alarming clients with large red text for routine license notices.
+            $badge = $success
                 ? '<span style="color:#16a34a;font-weight:700;">Updated Successfully</span>'
-                : '<span style="color:#dc2626;font-weight:700;">Update Failed</span>';
+                : '<span style="color:#92400e;font-weight:700;">Needs Attention</span>';
 
             $old = isset( $entry->old_version ) ? esc_html( $entry->old_version ) : '';
             $new = isset( $entry->new_version ) && $entry->new_version
@@ -88,20 +91,37 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
 
             $note = '';
             if ( ! $success ) {
-                if ( ! empty( $entry->error_code ) ) {
-                    $explain = wpmm_explain_error( $entry->error_code );
-                    $note = '<br><small style="color:#dc2626;">'
-                          . esc_html( $explain['label'] ) . ': '
-                          . esc_html( $explain['detail'] ) . '</small>';
+                $error_code = $entry->error_code ?? '';
+                if ( $error_code === 'no_package' || $error_code === 'wpmm_requires_manual' ) {
+                    // License-gated plugins — friendly client-facing message.
+                    $note = '<br><small style="color:#92400e;">'
+                          . 'This plugin requires a valid license key to download updates. '
+                          . 'Please update it manually via Dashboard &rarr; Updates or the plugin\'s own settings page.'
+                          . '</small>';
+                } elseif ( $error_code === 'copy_failed' ) {
+                    $note = '<br><small style="color:#92400e;">'
+                          . 'The update files could not be written to disk. '
+                          . 'Please check server file permissions and try again.'
+                          . '</small>';
+                } elseif ( $error_code ) {
+                    $explain = wpmm_explain_error( $error_code );
+                    $note    = '<br><small style="color:#92400e;">'
+                             . esc_html( $explain['label'] ) . ': '
+                             . esc_html( $explain['detail'] ) . '</small>';
                 } elseif ( ! empty( $entry->message ) ) {
-                    $note = '<br><small style="color:#6b7280;">' . esc_html( $entry->message ) . '</small>';
+                    // Strip any DEBUG: diagnostics from the message before emailing.
+                    $clean_msg = preg_replace( '/\s*DEBUG:.*$/s', '', $entry->message );
+                    $note      = '<br><small style="color:#92400e;">' . esc_html( $clean_msg ) . '</small>';
                 }
             }
 
             $name = isset( $entry->item_name ) ? esc_html( $entry->item_name ) : '(unknown)';
 
+            // Row background — amber tint for failures so they stand out gently.
+            $row_bg = $success ? '' : 'background:#fffbeb;';
+
             $html .= "
-            <tr>
+            <tr style='{$row_bg}'>
               <td style='padding:10px 14px;border-bottom:1px solid #e5e7eb;'>
                 {$icon} <strong>{$name}</strong>
                 <br><small style='color:#9ca3af;'>{$ver}</small>{$note}
@@ -395,10 +415,10 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
     <div style="padding:32px 36px 48px;">
       <h2 style="color:#1e3a5f;margin:0 0 6px;font-size:18px;font-family:Georgia,serif;">Weekly WordPress Maintenance Report</h2>
       <p style="color:#6b7280;font-size:13px;margin:0 0 4px;">The following updates were performed on your site.</p>
+      ' . $update_note_block . '
       ' . $sections . '
       ' . $external_section . '
       ' . $spam_section . '
-      ' . $update_note_block . '
     </div>
 
     <!-- FOOTER — separated from body by a full border-top; never overlaps content -->
@@ -480,8 +500,15 @@ function wpmm_get_spam_since_last_report() {
 
 /**
  * Send the maintenance email and log it to wpmm_email_log.
+ *
+ * @param string $to        Recipient email address.
+ * @param string $subject   Email subject line.
+ * @param string $body      Full HTML email body.
+ * @param int    $admin_id  Performing administrator user ID.
+ * @param string $note      Raw administrator note text (stored separately so
+ *                          previews can always display it regardless of body version).
  */
-function wpmm_send_email( $to, $subject, $body, $admin_id = 0 ) {
+function wpmm_send_email( $to, $subject, $body, $admin_id = 0, $note = '' ) {
     global $wpdb;
 
     $from_name  = 'Greenskeeper';
@@ -519,6 +546,7 @@ function wpmm_send_email( $to, $subject, $body, $admin_id = 0 ) {
             'to_email'   => $to,
             'subject'    => $subject,
             'body'       => $body,
+            'note'       => $note,
             'status'     => $status,
             'sent_at'    => current_time( 'mysql' ),
         ]

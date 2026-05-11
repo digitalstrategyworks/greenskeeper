@@ -433,7 +433,7 @@ function wpmm_ajax_send_email() {
             restore_current_blog();
         }
         $body   = wpmm_build_network_email_body( $sites_data, $admin_id, $update_note );
-        $result = wpmm_send_email( $to, $subject, $body, $admin_id );
+        $result = wpmm_send_email( $to, $subject, $body, $admin_id, $update_note );
         if ( $result['success'] ) {
             delete_option( 'wpmm_pending_sessions' );
             wp_send_json_success( [ 'message' => 'Network report sent successfully.', 'email_id' => $result['email_id'] ] );
@@ -445,7 +445,7 @@ function wpmm_ajax_send_email() {
 
     // ── Single-site email ─────────────────────────────────────────────────────
     $body   = wpmm_build_email_body( $log_entries, $admin_id, $manual_entries, $update_note );
-    $result = wpmm_send_email( $to, $subject, $body, $admin_id );
+    $result = wpmm_send_email( $to, $subject, $body, $admin_id, $update_note );
 
     if ( $result['success'] ) {
         // Always clear pending sessions after a successful send regardless of
@@ -536,7 +536,11 @@ function wpmm_ajax_get_email_body() {
         wp_send_json_error( 'Email record not found.' );
     }
 
-    // Rebuild body from log entries if we have a session_id stored.
+    // Stored note — may be null for emails sent before v2.1.6.
+    $stored_note = $row->note ?? '';
+
+    // Rebuild body from log entries if we have a session_id stored,
+    // passing the stored note so it appears correctly in the preview.
     $body = $row->body;
     if ( ! empty( $row->session_id ) ) {
         $log_entries = $wpdb->get_results( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -545,7 +549,7 @@ function wpmm_ajax_get_email_body() {
             $row->session_id
         ) );
         if ( ! empty( $log_entries ) ) {
-            $body = wpmm_build_email_body( $log_entries );
+            $body = wpmm_build_email_body( $log_entries, 0, [], $stored_note );
         }
     }
 
@@ -553,6 +557,7 @@ function wpmm_ajax_get_email_body() {
         'to_email' => $row->to_email,
         'subject'  => $row->subject,
         'body'     => $body,
+        'note'     => $stored_note,
         'status'   => $row->status,
         'sent_at'  => $row->sent_at,
     ] );

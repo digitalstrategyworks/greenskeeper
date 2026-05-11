@@ -52,6 +52,7 @@ function wpmm_create_tables() {
         to_email    VARCHAR(255)    NOT NULL DEFAULT '',
         subject     VARCHAR(500)    NOT NULL DEFAULT '',
         body        LONGTEXT        NOT NULL,
+        note        TEXT,
         status      VARCHAR(20)     NOT NULL DEFAULT '',
         sent_at     DATETIME        NOT NULL,
         PRIMARY KEY (id)
@@ -84,6 +85,7 @@ function wpmm_create_tables() {
         ],
         $email_table => [
             'session_id' => "ALTER TABLE {$email_table} ADD COLUMN session_id VARCHAR(64) NOT NULL DEFAULT '' AFTER id",
+            'note'       => "ALTER TABLE {$email_table} ADD COLUMN note TEXT AFTER body",
         ],
     ];
 

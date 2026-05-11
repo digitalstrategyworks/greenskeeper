@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.1.5
+Stable tag:        2.1.6
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -619,7 +619,29 @@ For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
 
+= 2.1.6 =
+* Feature: Administrator notes are now stored permanently with each sent
+  email. Previously the note was only included in the rendered email body
+  at send time — if the template changed, historical previews lost the
+  note. A new 'note' column is added to wpmm_email_log (existing installs
+  are upgraded automatically on first load). The raw note text is stored
+  separately from the HTML body so previews always show the exact note the
+  administrator typed, regardless of how the email template has evolved.
+  The preview modal displays the note in a prominently styled amber block
+  above the email iframe. Emails sent before v2.1.6 show no note block
+  (null note value) — only emails sent from this version onward will have
+  the note stored.
+
 = 2.1.5 =
+* Fix: Update Notes field content was being added below the spam section
+  where it was easy to miss. Note now appears prominently at the top of the
+  email body immediately below the report heading, ensuring clients always
+  see administrator notes before the update tables.
+* Fix: Failed update rows in the email template now use amber styling
+  ("Needs Attention" with amber background) instead of large red text
+  ("Update Failed" in red). License-gated plugins show a friendly
+  client-facing message instead of a technical error code. DEBUG diagnostic
+  strings are stripped from messages before they reach the client email.
 * Fix: iThemes Security Pro, Google Site Kit, and ShortPixel Image
   Optimizer were being deactivated after updates and not restored.
   These plugins intentionally self-deactivate during their update

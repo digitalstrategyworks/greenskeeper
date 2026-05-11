@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.1.5  
+**Version:** 2.1.6  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -861,6 +861,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.1.6
+- Feature: Administrator notes stored permanently in email log — always visible in historical previews
 
 ### 2.1.5
 - Fix: iThemes Security Pro, Google Site Kit, ShortPixel not restored after self-deactivating during update — new priority-99 upgrader_process_complete hook re-activates them

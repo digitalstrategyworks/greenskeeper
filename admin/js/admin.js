@@ -128,6 +128,36 @@ jQuery(function ($) {
         }, function (res) {
             modalHide($loading);
             if (res.success && res.data && res.data.body) {
+
+                // If a note was stored with this email, show it in an amber
+                // block above the iframe. For emails sent before v2.1.6 the
+                // note column is null — show a subtle informational message
+                // so the field is never silently blank in historical previews.
+                var $noteBlock = $('#wpmm-modal-note');
+                if (!$noteBlock.length) {
+                    $noteBlock = $('<div id="wpmm-modal-note"></div>').insertBefore($iframe);
+                }
+                if (res.data.note && res.data.note.trim()) {
+                    $noteBlock.html(
+                        '<div style="margin:12px 16px 0;padding:12px 16px;background:#fffbeb;' +
+                        'border:1px solid #fde68a;border-radius:6px;">' +
+                        '<p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#92400e;' +
+                        'text-transform:uppercase;letter-spacing:.05em;">Note from administrator</p>' +
+                        '<p style="margin:0;font-size:13px;color:#78350f;line-height:1.6;">' +
+                        escHtml(res.data.note).replace(/\n/g, '<br>') +
+                        '</p></div>'
+                    ).show();
+                } else {
+                    $noteBlock.html(
+                        '<div style="margin:12px 16px 0;padding:10px 16px;background:#f8fafc;' +
+                        'border:1px solid #e5e7eb;border-radius:6px;">' +
+                        '<p style="margin:0;font-size:12px;color:#9ca3af;font-style:italic;">' +
+                        '&#8505; No administrator note was recorded for this email. ' +
+                        'Notes are stored from Greenskeeper v2.1.6 onward.' +
+                        '</p></div>'
+                    ).show();
+                }
+
                 $iframe.attr('srcdoc', res.data.body);
 
                 // Auto-resize the iframe to its content height once loaded
@@ -172,6 +202,8 @@ jQuery(function ($) {
         $iframe.attr('srcdoc', '');
         modalHide($iframe);
         $('body').css('overflow', '');
+        var $noteBlock = $('#wpmm-modal-note');
+        if ($noteBlock.length) { $noteBlock.hide(); }
     }
 
     $(document).on('click', '.wpmm-preview-btn', function () {
