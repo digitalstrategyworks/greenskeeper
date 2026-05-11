@@ -323,14 +323,18 @@ jQuery(function ($) {
             if ( item.requires_manual ) {
                 // No package URL — vendor requires a browser-based license check
                 // before providing a download link (e.g. Gravity Forms add-ons).
-                // Show an informational warning instead of an Update button.
+                // Show an informational amber warning instead of an Update button.
                 $cb.prop('disabled', true).prop('checked', false);
                 var $warn = $('<div class="wpmm-item-status"></div>').html(
-                    '<span class="wpmm-status-warning" style="color:#b45309;">' +
-                    '&#9888; Manual update required &mdash; this plugin\'s vendor requires a ' +
-                    'browser-based license check to download updates. Please update it via ' +
-                    'Dashboard &rarr; Updates or the plugin\'s own settings page.' +
-                    '</span>'
+                    '<div style="display:inline-flex;align-items:flex-start;gap:8px;' +
+                    'background:#fffbeb;border:1px solid #fde68a;border-radius:6px;' +
+                    'padding:8px 12px;font-size:12px;color:#92400e;line-height:1.5;max-width:520px;">' +
+                    '<span class="dashicons dashicons-warning" style="color:#f59e0b;font-size:15px;' +
+                    'width:15px;height:15px;flex-shrink:0;margin-top:1px;"></span>' +
+                    '<span><strong>Manual update required</strong> &mdash; this plugin\'s vendor ' +
+                    'requires a browser-based license check to download updates. Please update it via ' +
+                    'Dashboard &rarr; Updates or the plugin\'s own settings page.</span>' +
+                    '</div>'
                 );
                 $act.append($warn);
             } else {
