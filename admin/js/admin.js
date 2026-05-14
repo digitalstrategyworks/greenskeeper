@@ -1854,6 +1854,33 @@ jQuery(function ($) {
     })();
 
 
+    // ── Activity Log settings save (Settings page) ─────────────────────────
+    // Kept OUTSIDE the activity log IIFE so it works on the Settings page
+    // where the #wpmm-activity-tbody guard would otherwise prevent it firing.
+    $(document).on('click', '.wpmm-save-activity-settings', function () {
+        var $btn = $(this).prop('disabled', true);
+        var $msg = $('#wpmm-activity-settings-msg');
+        $msg.html('<span style="color:var(--wpmm-gray);">Saving&hellip;</span>');
+        $.post(wpmm.ajax_url, {
+            action:                      'wpmm_save_settings',
+            nonce:                       wpmm.nonce,
+            activity_log_enabled:        $('#wpmm-activity-enabled').is(':checked') ? 1 : 0,
+            activity_log_retention_days: $('#wpmm-activity-retention').val() || 90,
+            activity_log_full_ip:        $('#wpmm-activity-full-ip').is(':checked') ? 1 : 0,
+        }, function (res) {
+            $btn.prop('disabled', false);
+            if (res.success) {
+                $msg.html('<span style="color:var(--wpmm-green);">&#10003; Saved.</span>');
+                setTimeout(function () { $msg.html(''); }, 3000);
+            } else {
+                $msg.html('<span style="color:var(--wpmm-red);">Save failed. Please try again.</span>');
+            }
+        }).fail(function () {
+            $btn.prop('disabled', false);
+            $msg.html('<span style="color:var(--wpmm-red);">Request failed.</span>');
+        });
+    });
+
     // =========================================================================
     // SITE ACTIVITY LOG
     // =========================================================================
@@ -2120,27 +2147,6 @@ jQuery(function ($) {
             }).fail(function () {
                 $btn.prop('disabled', false)
                     .html('<span class="dashicons dashicons-download"></span> Export CSV');
-            });
-        });
-
-        // ── Activity settings save ──────────────────────────────────────────
-        $(document).on('click', '.wpmm-save-activity-settings', function () {
-            var $btn = $(this).prop('disabled', true);
-            var $msg = $('#wpmm-activity-settings-msg');
-            $.post(wpmm.ajax_url, {
-                action:                      'wpmm_save_settings',
-                nonce:                       wpmm.nonce,
-                activity_log_enabled:        $('#wpmm-activity-enabled').is(':checked') ? 1 : 0,
-                activity_log_retention_days: $('#wpmm-activity-retention').val() || 90,
-                activity_log_full_ip:        $('#wpmm-activity-full-ip').is(':checked') ? 1 : 0,
-            }, function (res) {
-                $btn.prop('disabled', false);
-                if (res.success) {
-                    $msg.html('<span style="color:var(--wpmm-green);">&#10003; Saved.</span>');
-                    setTimeout(function () { $msg.html(''); }, 3000);
-                } else {
-                    $msg.html('<span style="color:var(--wpmm-red);">Save failed.</span>');
-                }
             });
         });
 

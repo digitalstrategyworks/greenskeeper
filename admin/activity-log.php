@@ -28,19 +28,27 @@ function wpmm_render_activity_log() {
         <?php wpmm_page_header( WPMM_SLUG_ACTIVITY ); ?>
 
         <?php if ( ! $activity_enabled ) : ?>
-        <div class="wpmm-card" style="max-width:640px;margin:32px auto;text-align:center;padding:48px 36px;">
-            <span class="dashicons dashicons-list-view" style="font-size:48px;width:48px;height:48px;color:var(--wpmm-blue2);margin-bottom:16px;display:block;"></span>
+        <!-- Disabled state — rendered inside standard page chrome so nav and
+             header match every other Greenskeeper page. -->
+        <div class="wpmm-card" style="padding:48px 36px;text-align:center;">
+            <span class="dashicons dashicons-list-view"
+                  style="font-size:48px;width:48px;height:48px;color:var(--wpmm-blue2);
+                         margin-bottom:16px;display:block;"></span>
             <h2 style="margin:0 0 12px;color:var(--wpmm-blue);">Site Activity Log is disabled</h2>
-            <p style="color:var(--wpmm-text-light);margin:0 0 24px;line-height:1.6;">
-                Enable the activity log to track user logins, plugin changes, and other key site events.
-                IP addresses are anonymised by default in accordance with GDPR requirements.
+            <p style="color:var(--wpmm-text-light);margin:0 0 8px;line-height:1.6;max-width:520px;display:inline-block;">
+                Enable the activity log to track user logins, plugin changes, and other key
+                site events. IP addresses are anonymised by default in accordance with GDPR
+                requirements.
             </p>
-            <a href="<?php echo esc_url( wpmm_subpage_url( WPMM_SLUG_SETTINGS ) . '#activity-log-settings' ); ?>"
-               class="wpmm-btn wpmm-btn-primary">
-                <span class="dashicons dashicons-admin-settings"></span>
-                Enable in Settings &rarr;
-            </a>
+            <p style="margin:0 0 28px;">
+                <a href="<?php echo esc_url( wpmm_subpage_url( WPMM_SLUG_SETTINGS ) . '#activity-log-settings' ); ?>"
+                   class="wpmm-btn wpmm-btn-primary" style="display:inline-flex;align-items:center;gap:6px;">
+                    <span class="dashicons dashicons-admin-settings" style="margin:0;"></span>
+                    Enable in Settings &rarr;
+                </a>
+            </p>
         </div>
+        </div><!-- .wpmm-wrap -->
         <?php return; endif; ?>
 
         <!-- Toolbar -->
