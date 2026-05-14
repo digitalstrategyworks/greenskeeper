@@ -142,6 +142,7 @@ function wpmm_enqueue_assets( $hook ) {
         WPMM_SLUG_UPDATES,
         WPMM_SLUG_LOG,
         WPMM_SLUG_EMAIL,
+        WPMM_SLUG_ACTIVITY,
         WPMM_SLUG_SPAM,
         WPMM_SLUG_SETTINGS,
     ];
@@ -223,6 +224,7 @@ function wpmm_page_header( $active_slug ) {
         WPMM_SLUG_UPDATES   => [ 'label' => 'Updates',       'icon' => 'update' ],
         WPMM_SLUG_LOG       => [ 'label' => 'Update Log',    'icon' => 'list-view' ],
         WPMM_SLUG_EMAIL     => [ 'label' => 'Email Reports', 'icon' => 'email-alt' ],
+        WPMM_SLUG_ACTIVITY  => [ 'label' => 'Site Activity', 'icon' => 'list-view' ],
         WPMM_SLUG_SPAM      => [ 'label' => 'Spam Log',      'icon' => 'shield' ],
         WPMM_SLUG_SETTINGS  => [ 'label' => 'Settings',      'icon' => 'admin-settings' ],
     ];
