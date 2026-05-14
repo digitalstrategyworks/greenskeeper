@@ -100,6 +100,18 @@ function wpmm_ajax_save_settings() {
         $s['default_admin_id'] = absint( $_POST['default_admin_id'] );
     }
 
+    // Activity log settings
+    if ( array_key_exists( 'activity_log_enabled', $_POST ) ) {
+        $s['activity_log_enabled'] = (bool) absint( $_POST['activity_log_enabled'] );
+    }
+    if ( array_key_exists( 'activity_log_retention_days', $_POST ) ) {
+        $days = absint( $_POST['activity_log_retention_days'] );
+        $s['activity_log_retention_days'] = min( $days, 3650 ); // cap at 10 years
+    }
+    if ( array_key_exists( 'activity_log_full_ip', $_POST ) ) {
+        $s['activity_log_full_ip'] = (bool) absint( $_POST['activity_log_full_ip'] );
+    }
+
     wpmm_save_settings( $s );
     wp_send_json_success( $s );
 }
@@ -485,6 +497,102 @@ function wpmm_render_settings() {
                         </div>
                         <?php endif; ?>
                     </div>
+                </div>
+            </div>
+
+            <!-- ── Site Activity Log ─────────────────────────────────── -->
+            <div class="wpmm-card" id="activity-log-settings">
+                <h2 class="wpmm-card-title">
+                    <span class="dashicons dashicons-list-view"></span> Site Activity Log
+                </h2>
+                <p class="wpmm-card-desc">
+                    Track user logins, plugin changes, and key site events for maintenance oversight.
+                    IP addresses are anonymised by default to comply with GDPR requirements.
+                </p>
+
+                <!-- Enable toggle -->
+                <div class="wpmm-settings-group">
+                    <div class="wpmm-settings-group-label">
+                        <strong>Enable Activity Log</strong>
+                        <span>Start recording site events.</span>
+                    </div>
+                    <div class="wpmm-settings-group-control">
+                        <label class="wpmm-toggle">
+                            <input type="checkbox" name="activity_log_enabled" id="wpmm-activity-enabled"
+                                   value="1" <?php checked( ! empty( $s['activity_log_enabled'] ) ); ?>>
+                            <span class="wpmm-toggle-slider"></span>
+                        </label>
+                        <span class="wpmm-hint" style="margin-left:12px;">
+                            When disabled, no new events are recorded and the Site Activity page shows an enable prompt.
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Retention period -->
+                <div class="wpmm-settings-group">
+                    <div class="wpmm-settings-group-label">
+                        <strong>Retention Period</strong>
+                        <span>Auto-purge entries older than this many days.</span>
+                    </div>
+                    <div class="wpmm-settings-group-control">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <input type="number" name="activity_log_retention_days"
+                                   id="wpmm-activity-retention"
+                                   class="wpmm-input" style="width:90px;"
+                                   min="0" max="3650"
+                                   value="<?php echo esc_attr( $s['activity_log_retention_days'] ?? 90 ); ?>">
+                            <span style="font-size:13px;color:var(--wpmm-text-light);">days</span>
+                        </div>
+                        <p class="wpmm-hint">
+                            Set to <strong>0</strong> to keep entries indefinitely (not recommended for GDPR compliance).
+                            The GDPR does not mandate a specific retention period, but the European Data Protection Board
+                            recommends retaining personal data only as long as necessary for its purpose.
+                            90 days is a reasonable default for a maintenance audit trail.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- IP address storage -->
+                <div class="wpmm-settings-group">
+                    <div class="wpmm-settings-group-label">
+                        <strong>IP Address Storage</strong>
+                        <span>Choose how IP addresses are stored.</span>
+                    </div>
+                    <div class="wpmm-settings-group-control">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" name="activity_log_full_ip" id="wpmm-activity-full-ip"
+                                   value="1" <?php checked( ! empty( $s['activity_log_full_ip'] ) ); ?>>
+                            <span style="font-size:13px;">Store full IP address (opt-in)</span>
+                        </label>
+                        <p class="wpmm-hint" style="margin-top:8px;">
+                            <strong>Default (unchecked):</strong> IP addresses are anonymised — the last octet of IPv4
+                            addresses (and last 80 bits of IPv6) are zeroed before storage. This is the approach
+                            recommended by the European Data Protection Board and used by services like Google Analytics.<br><br>
+                            <strong>Full IP (checked):</strong> The complete IP address is stored. Only enable this if
+                            you have a documented legitimate purpose, have updated your privacy policy to disclose this,
+                            and comply with any applicable data processing requirements under GDPR or your local law.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- GDPR notice -->
+                <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;
+                            padding:14px 18px;margin-top:8px;font-size:13px;color:#166534;line-height:1.6;">
+                    <strong>&#10003; GDPR Compliance</strong><br>
+                    Greenskeeper's activity log is designed with GDPR principles of data minimisation and
+                    purpose limitation in mind. IP addresses are anonymised by default. Entries are
+                    automatically purged after the configured retention period. You can export all stored
+                    activity data via the <a href="<?php echo esc_url( wpmm_subpage_url( WPMM_SLUG_ACTIVITY ) ); ?>">Site Activity page</a>
+                    to respond to Subject Access Requests, and bulk-delete all entries at any time.
+                    If you store full IP addresses, update your site's privacy policy to disclose this
+                    and document your legitimate purpose under Article 6 of the GDPR.
+                </div>
+
+                <div style="margin-top:16px;">
+                    <button type="button" class="wpmm-btn wpmm-btn-primary wpmm-save-activity-settings">
+                        <span class="dashicons dashicons-saved"></span> Save Activity Settings
+                    </button>
+                    <span class="wpmm-save-feedback" id="wpmm-activity-settings-msg"></span>
                 </div>
             </div>
 

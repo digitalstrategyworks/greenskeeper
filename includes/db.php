@@ -75,7 +75,29 @@ function wpmm_create_tables() {
         KEY author_ip  (author_ip)
     ) {$charset};" );
 
-    // ── Column upgrade paths ──────────────────────────────────────────────────
+    // ── wpmm_activity_log ─────────────────────────────────────────────────────
+    // Site Activity Log — authentication, user management, site changes.
+    // IP addresses are anonymised by default (see activity-log.php).
+    // Retention: configurable, default 90 days, purged by daily wp-cron.
+    $activity_table = esc_sql( $wpdb->prefix . 'wpmm_activity_log' );
+    dbDelta( "CREATE TABLE IF NOT EXISTS {$activity_table} (
+        id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        event       VARCHAR(60)     NOT NULL DEFAULT '',
+        category    VARCHAR(40)     NOT NULL DEFAULT '',
+        summary     VARCHAR(500)    NOT NULL DEFAULT '',
+        context     TEXT,
+        user_id     BIGINT UNSIGNED NOT NULL DEFAULT 0,
+        user_login  VARCHAR(60)     NOT NULL DEFAULT '',
+        user_name   VARCHAR(255)    NOT NULL DEFAULT '',
+        ip_address  VARCHAR(45)     NOT NULL DEFAULT '',
+        logged_at   DATETIME        NOT NULL,
+        PRIMARY KEY (id),
+        KEY category  (category),
+        KEY user_id   (user_id),
+        KEY logged_at (logged_at)
+    ) {$charset};" );
+
+
     // Add any column that might be missing from installs that predate its addition.
     // Each ALTER is guarded individually so one failure does not block others.
     $upgrades = [

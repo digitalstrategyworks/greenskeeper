@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.1.6
+Stable tag:        2.1.7
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -154,6 +154,47 @@ the integration; you are responsible for holding a valid Akismet licence
 appropriate for your site's use.
 
 == Frequently Asked Questions ==
+
+= Does Greenskeeper log site activity and user logins? =
+Yes — Greenskeeper includes a Site Activity Log that records user logins,
+failed login attempts, plugin changes, theme switches, user account changes,
+and WordPress core updates. The log is disabled by default and can be enabled
+in Greenskeeper → Settings → Site Activity Log.
+
+= Is the Site Activity Log GDPR compliant? =
+Yes. The activity log is designed with GDPR data minimisation principles from
+the ground up. IP addresses are anonymised by default — the last octet of IPv4
+addresses and the last 80 bits of IPv6 addresses are zeroed before storage,
+following the approach recommended by the European Data Protection Board. Log
+entries are automatically purged after a configurable retention period (default
+90 days). You can export all stored activity data as CSV to respond to Subject
+Access Requests, and bulk-delete all entries at any time from the Site Activity
+page. Full IP address storage is available as an explicit opt-in for sites with
+a documented legitimate purpose under GDPR Article 6.
+
+= What events does the Site Activity Log record? =
+Authentication: user logins, failed login attempts, logouts, password reset
+requests, password changes. User management: account creation and deletion,
+role changes, administrator profile updates. Site changes: plugin activation,
+deactivation and deletion, theme switches, WordPress core updates, and changes
+to key WordPress options (site title, admin email, permalink structure, etc.).
+Post and page editing activity is reserved for a future Pro version.
+
+= How long does Greenskeeper keep activity log data? =
+By default, log entries are automatically purged after 90 days via a daily
+WordPress cron event. You can change the retention period in Greenskeeper →
+Settings → Site Activity Log. Set the retention to 0 to keep entries
+indefinitely (not recommended for GDPR compliance). Entries can also be
+manually deleted individually or in bulk from the Site Activity page at
+any time.
+
+= Can I export the activity log for a GDPR Subject Access Request? =
+Yes. The Site Activity page includes an Export CSV button that downloads all
+stored activity log entries as a UTF-8 CSV file. You can also access the
+export via Greenskeeper → Settings → Site Activity Log. The export includes
+all logged fields: event type, category, summary, context, user ID, username,
+display name, anonymised IP address, and timestamp.
+
 
 
 = Does Greenskeeper report updates made outside the plugin? =
@@ -618,6 +659,21 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.1.7 =
+* Feature: Site Activity Log — a new dedicated admin page that tracks and
+  logs key site events including user logins, failed login attempts,
+  logouts, password resets, user account creation and deletion, role
+  changes, plugin activation/deactivation/deletion, theme switches,
+  WordPress core updates, and key settings changes. Built with GDPR
+  compliance as a first principle: IP addresses are anonymised by default
+  (last octet of IPv4 / last 80 bits of IPv6 zeroed), a configurable
+  retention period (default 90 days) auto-purges old entries via daily
+  wp-cron, a full CSV data export tool supports Subject Access Requests,
+  and all entries can be bulk-deleted at any time. Full IP storage is
+  available as an explicit opt-in for sites with a documented legitimate
+  purpose. The activity log can be enabled or disabled independently from
+  a new section in Greenskeeper Settings.
 
 = 2.1.6 =
 * Feature: Administrator notes are now stored permanently with each sent

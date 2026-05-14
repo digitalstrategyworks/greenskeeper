@@ -14,6 +14,7 @@ define( 'WPMM_SLUG_DASHBOARD',  'wpmm-dashboard' );
 define( 'WPMM_SLUG_UPDATES',    'wpmm-updates' );
 define( 'WPMM_SLUG_LOG',        'wpmm-update-log' );
 define( 'WPMM_SLUG_EMAIL',      'wpmm-email-reports' );
+define( 'WPMM_SLUG_ACTIVITY',   'wpmm-activity-log' );
 define( 'WPMM_SLUG_SETTINGS',   'wpmm-settings' );
 define( 'WPMM_SLUG_SPAM',        'wpmm-spam-log' );
 
@@ -78,6 +79,14 @@ function wpmm_build_menus( $cap ) {
         $cap,
         WPMM_SLUG_EMAIL,
         'wpmm_render_email'
+    );
+    $hooks[] = add_submenu_page(
+        WPMM_SLUG_PARENT,
+        'Greenskeeper — Site Activity',
+        'Site Activity',
+        $cap,
+        WPMM_SLUG_ACTIVITY,
+        'wpmm_render_activity_log'
     );
 
     // Persist hook suffixes so wpmm_enqueue_assets() can match them.

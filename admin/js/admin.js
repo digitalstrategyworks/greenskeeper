@@ -1854,4 +1854,299 @@ jQuery(function ($) {
     })();
 
 
-}); // end jQuery ready
+    // =========================================================================
+    // SITE ACTIVITY LOG
+    // =========================================================================
+    (function () {
+        if ( ! $('#wpmm-activity-tbody').length ) { return; }
+
+        var currentPage  = 1;
+        var currentTotal = 0;
+        var selectedIds  = [];
+
+        // ── Category badge colours ──────────────────────────────────────────
+        var categoryStyles = {
+            'authentication': { bg:'#eff6ff', color:'#1d4ed8', label:'Authentication' },
+            'user_management': { bg:'#f5f3ff', color:'#6d28d9', label:'User Management' },
+            'site_change':    { bg:'#f0fdf4', color:'#166534', label:'Site Changes' },
+            'content':        { bg:'#fff7ed', color:'#c2410c', label:'Content' },
+        };
+
+        // ── Event icon map ──────────────────────────────────────────────────
+        var eventIcons = {
+            'user_login':              'dashicons-admin-users',
+            'login_failed':            'dashicons-warning',
+            'user_logout':             'dashicons-exit',
+            'password_reset_requested':'dashicons-lock',
+            'password_changed':        'dashicons-lock',
+            'user_created':            'dashicons-plus-alt',
+            'user_deleted':            'dashicons-trash',
+            'user_role_changed':       'dashicons-admin-generic',
+            'user_profile_updated':    'dashicons-edit',
+            'plugin_activated':        'dashicons-admin-plugins',
+            'plugin_deactivated':      'dashicons-admin-plugins',
+            'plugin_deleted':          'dashicons-trash',
+            'theme_switched':          'dashicons-admin-appearance',
+            'core_updated':            'dashicons-wordpress',
+            'greenskeeper_settings_saved': 'dashicons-admin-settings',
+            'option_updated':          'dashicons-admin-settings',
+        };
+
+        function getIcon(event) {
+            return eventIcons[event] || 'dashicons-marker';
+        }
+
+        function getCategoryBadge(category) {
+            var style = categoryStyles[category] || { bg:'#f3f4f6', color:'#374151', label: category };
+            return '<span style="background:' + style.bg + ';color:' + style.color +
+                   ';font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;' +
+                   'white-space:nowrap;">' + escHtml(style.label) + '</span>';
+        }
+
+        // ── Load rows ───────────────────────────────────────────────────────
+        function loadActivity(page) {
+            currentPage = page || 1;
+            $('#wpmm-activity-loading').show();
+            $('#wpmm-activity-table-container, #wpmm-activity-empty').hide();
+            $('#wpmm-activity-pagination').empty();
+
+            $.post(wpmm.ajax_url, {
+                action:    'wpmm_activity_log_get',
+                nonce:     wpmm.nonce,
+                page:      currentPage,
+                per_page:  $('#wpmm-activity-per-page').val() || 50,
+                category:  $('#wpmm-activity-category').val() || '',
+                search:    $('#wpmm-activity-search').val() || '',
+                date_from: $('#wpmm-activity-from').val() || '',
+                date_to:   $('#wpmm-activity-to').val() || '',
+            }, function (res) {
+                $('#wpmm-activity-loading').hide();
+                if (!res.success) {
+                    $('#wpmm-activity-empty').show();
+                    return;
+                }
+
+                var rows  = res.data.rows;
+                currentTotal = res.data.total;
+
+                $('#wpmm-activity-count').text(
+                    'Showing ' + rows.length + ' of ' + currentTotal + ' events'
+                );
+
+                if (!rows.length) {
+                    $('#wpmm-activity-empty').show();
+                    return;
+                }
+
+                var html = '';
+                rows.forEach(function (row) {
+                    var icon    = getIcon(row.event);
+                    var badge   = getCategoryBadge(row.category);
+                    var dateStr = row.logged_at ? row.logged_at.replace('T', ' ').substring(0, 16) : '';
+                    var isFail  = row.event === 'login_failed';
+
+                    html += '<tr data-id="' + escHtml(row.id) + '" class="wpmm-activity-row' +
+                            (isFail ? ' wpmm-activity-row-warn' : '') + '" ' +
+                            'style="cursor:pointer;' + (isFail ? 'background:#fffbeb;' : '') + '">' +
+                            '<td style="padding:10px 12px;" onclick="event.stopPropagation();">' +
+                            '<input type="checkbox" class="wpmm-activity-cb" value="' + escHtml(row.id) + '">' +
+                            '</td>' +
+                            '<td style="padding:10px 12px;font-size:12px;color:var(--wpmm-gray);white-space:nowrap;">' +
+                            escHtml(dateStr) + '</td>' +
+                            '<td style="padding:10px 12px;">' + badge + '</td>' +
+                            '<td style="padding:10px 12px;">' +
+                            '<span class="dashicons ' + icon + '" style="vertical-align:middle;' +
+                            'margin-right:6px;font-size:14px;width:14px;height:14px;' +
+                            'color:' + (isFail ? '#f59e0b' : 'var(--wpmm-blue2)') + ';"></span>' +
+                            escHtml(row.summary) +
+                            '</td>' +
+                            '<td style="padding:10px 12px;font-size:13px;">' +
+                            (row.user_name ? escHtml(row.user_name) : '<span style="color:var(--wpmm-gray);">—</span>') +
+                            (row.user_login ? '<br><small style="color:var(--wpmm-gray);">@' + escHtml(row.user_login) + '</small>' : '') +
+                            '</td>' +
+                            '<td style="padding:10px 12px;font-size:12px;font-family:monospace;color:var(--wpmm-gray);">' +
+                            escHtml(row.ip_address || '—') + '</td>' +
+                            '</tr>';
+                });
+
+                $('#wpmm-activity-tbody').html(html);
+                $('#wpmm-activity-table-container').show();
+                renderPagination(res.data.page, res.data.total_pages);
+            }).fail(function () {
+                $('#wpmm-activity-loading').hide();
+                $('#wpmm-activity-empty').show();
+            });
+        }
+
+        // ── Pagination ──────────────────────────────────────────────────────
+        function renderPagination(page, totalPages) {
+            if (totalPages <= 1) {
+                $('#wpmm-activity-pagination').empty();
+                return;
+            }
+            var prev = page > 1
+                ? '<button class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm wpmm-activity-page-btn" data-page="' + (page-1) + '">&laquo; Prev</button>'
+                : '<button class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm" disabled>&laquo; Prev</button>';
+            var next = page < totalPages
+                ? '<button class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm wpmm-activity-page-btn" data-page="' + (page+1) + '">Next &raquo;</button>'
+                : '<button class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm" disabled>Next &raquo;</button>';
+            $('#wpmm-activity-pagination').html(
+                prev + '<span style="font-size:13px;color:var(--wpmm-gray);">Page ' + page + ' of ' + totalPages + '</span>' + next
+            );
+        }
+
+        $(document).on('click', '.wpmm-activity-page-btn', function () {
+            loadActivity(parseInt($(this).data('page'), 10));
+        });
+
+        // ── Row click → detail drawer ───────────────────────────────────────
+        $(document).on('click', '.wpmm-activity-row', function () {
+            var $row  = $(this);
+            var id    = $row.data('id');
+            var cells = $row.find('td');
+
+            var ctx   = '';
+            // Find the matching row data from the last response — simplest approach
+            // is to re-read from the DOM cells we rendered.
+            var content =
+                '<dl style="margin:0;">' +
+                '<dt style="font-weight:700;color:var(--wpmm-blue);margin-bottom:2px;">Date</dt>' +
+                '<dd style="margin:0 0 14px;font-size:13px;">' + escHtml($(cells[1]).text()) + '</dd>' +
+                '<dt style="font-weight:700;color:var(--wpmm-blue);margin-bottom:2px;">Category</dt>' +
+                '<dd style="margin:0 0 14px;">' + $(cells[2]).html() + '</dd>' +
+                '<dt style="font-weight:700;color:var(--wpmm-blue);margin-bottom:2px;">Event</dt>' +
+                '<dd style="margin:0 0 14px;font-size:13px;">' + escHtml($(cells[3]).text().trim()) + '</dd>' +
+                '<dt style="font-weight:700;color:var(--wpmm-blue);margin-bottom:2px;">User</dt>' +
+                '<dd style="margin:0 0 14px;font-size:13px;">' + $(cells[4]).html() + '</dd>' +
+                '<dt style="font-weight:700;color:var(--wpmm-blue);margin-bottom:2px;">IP Address</dt>' +
+                '<dd style="margin:0 0 14px;font-size:13px;font-family:monospace;">' + escHtml($(cells[5]).text()) + '</dd>' +
+                '</dl>' +
+                '<hr style="border:none;border-top:1px solid var(--wpmm-border);margin:8px 0 16px;">' +
+                '<p style="font-size:12px;color:var(--wpmm-gray);margin:0;">Event ID: ' + escHtml(String(id)) + '</p>';
+
+            $('#wpmm-activity-drawer-content').html(content);
+            $('#wpmm-activity-drawer, #wpmm-activity-drawer-overlay').show();
+            $('body').css('overflow', 'hidden');
+        });
+
+        $('#wpmm-activity-drawer-close, #wpmm-activity-drawer-overlay').on('click', function () {
+            $('#wpmm-activity-drawer, #wpmm-activity-drawer-overlay').hide();
+            $('body').css('overflow', '');
+        });
+
+        // ── Checkbox / select all ───────────────────────────────────────────
+        $(document).on('change', '#wpmm-activity-select-all', function () {
+            $('.wpmm-activity-cb').prop('checked', $(this).is(':checked'));
+            updateBulkBar();
+        });
+        $(document).on('change', '.wpmm-activity-cb', function () {
+            updateBulkBar();
+        });
+
+        function updateBulkBar() {
+            var checked = $('.wpmm-activity-cb:checked').length;
+            if (checked > 0) {
+                $('#wpmm-activity-bulk-bar').css('display', 'flex');
+            } else {
+                $('#wpmm-activity-bulk-bar').hide();
+            }
+        }
+
+        // ── Filter ──────────────────────────────────────────────────────────
+        $('#wpmm-activity-filter-btn').on('click', function () { loadActivity(1); });
+        $('#wpmm-activity-reset-btn').on('click', function () {
+            $('#wpmm-activity-category').val('');
+            $('#wpmm-activity-search').val('');
+            $('#wpmm-activity-from').val('');
+            $('#wpmm-activity-to').val('');
+            loadActivity(1);
+        });
+        $('#wpmm-activity-per-page').on('change', function () { loadActivity(1); });
+        $('#wpmm-activity-search').on('keydown', function (e) {
+            if (e.key === 'Enter') { loadActivity(1); }
+        });
+
+        // ── Bulk delete ─────────────────────────────────────────────────────
+        $('#wpmm-activity-bulk-delete').on('click', function () {
+            var ids = $('.wpmm-activity-cb:checked').map(function () {
+                return $(this).val();
+            }).get();
+            if (!ids.length) { return; }
+            if (!window.confirm('Delete ' + ids.length + ' selected event(s)?')) { return; }
+
+            $.post(wpmm.ajax_url, {
+                action: 'wpmm_activity_log_delete',
+                nonce:  wpmm.nonce,
+                ids:    ids
+            }, function (res) {
+                if (res.success) { loadActivity(currentPage); }
+                else { $('#wpmm-activity-bulk-msg').html('<span style="color:var(--wpmm-red);">Delete failed.</span>'); }
+            });
+        });
+
+        // ── Clear all ───────────────────────────────────────────────────────
+        $('#wpmm-activity-clear-btn').on('click', function () {
+            if (!window.confirm('Delete ALL activity log entries? This cannot be undone.')) { return; }
+            $.post(wpmm.ajax_url, {
+                action:    'wpmm_activity_log_delete',
+                nonce:     wpmm.nonce,
+                clear_all: 1
+            }, function (res) {
+                if (res.success) { loadActivity(1); }
+            });
+        });
+
+        // ── Export CSV ──────────────────────────────────────────────────────
+        $('#wpmm-activity-export-btn').on('click', function () {
+            var $btn = $(this).prop('disabled', true)
+                .html('<span class="dashicons dashicons-update wpmm-spin"></span> Exporting&hellip;');
+
+            $.post(wpmm.ajax_url, {
+                action: 'wpmm_activity_log_export',
+                nonce:  wpmm.nonce
+            }, function (res) {
+                $btn.prop('disabled', false)
+                    .html('<span class="dashicons dashicons-download"></span> Export CSV');
+                if (res.success && res.data.csv) {
+                    var blob = new Blob(
+                        [atob(res.data.csv)],
+                        { type: 'text/csv;charset=utf-8;' }
+                    );
+                    var link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = res.data.filename;
+                    link.click();
+                }
+            }).fail(function () {
+                $btn.prop('disabled', false)
+                    .html('<span class="dashicons dashicons-download"></span> Export CSV');
+            });
+        });
+
+        // ── Activity settings save ──────────────────────────────────────────
+        $(document).on('click', '.wpmm-save-activity-settings', function () {
+            var $btn = $(this).prop('disabled', true);
+            var $msg = $('#wpmm-activity-settings-msg');
+            $.post(wpmm.ajax_url, {
+                action:                      'wpmm_save_settings',
+                nonce:                       wpmm.nonce,
+                activity_log_enabled:        $('#wpmm-activity-enabled').is(':checked') ? 1 : 0,
+                activity_log_retention_days: $('#wpmm-activity-retention').val() || 90,
+                activity_log_full_ip:        $('#wpmm-activity-full-ip').is(':checked') ? 1 : 0,
+            }, function (res) {
+                $btn.prop('disabled', false);
+                if (res.success) {
+                    $msg.html('<span style="color:var(--wpmm-green);">&#10003; Saved.</span>');
+                    setTimeout(function () { $msg.html(''); }, 3000);
+                } else {
+                    $msg.html('<span style="color:var(--wpmm-red);">Save failed.</span>');
+                }
+            });
+        });
+
+        // ── Initial load ────────────────────────────────────────────────────
+        loadActivity(1);
+
+    })();
+
+
