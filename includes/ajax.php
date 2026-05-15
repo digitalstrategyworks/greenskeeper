@@ -70,7 +70,13 @@ function wpmm_ajax_run_update() {
     $slug       = sanitize_text_field( wp_unslash( $_POST['item_slug']  ?? '' ) );
     $session_id = sanitize_text_field( wp_unslash( $_POST['session_id'] ?? '' ) );
     $package    = esc_url_raw( wp_unslash( $_POST['package']    ?? '' ) );
+    $admin_id   = absint( $_POST['admin_id'] ?? 0 );
     // phpcs:enable WordPress.Security.NonceVerification.Missing
+
+    // Store admin_id in a global so wpmm_do_update() → pending sessions
+    // storage can read it without it needing to be passed through every
+    // function signature — fixing Codex audit issue #5.
+    $GLOBALS['wpmm_performing_admin_id'] = $admin_id;
 
     if ( ! $type || ! $slug ) {
         wp_send_json_error( 'Missing parameters.' );
@@ -282,6 +288,26 @@ function wpmm_ajax_send_email() {
     // 3. wpmm_last_session fallback for backward compatibility.
     // 4. Empty → fall back to the 100 most recent log entries.
     $posted_session = sanitize_text_field( wp_unslash( $_POST['session_id'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified above.
+
+    // ── Performing administrator resolution (Codex issue #5) ─────────────────
+    // When the email is sent from the Updates page in the same browser session,
+    // admin_id is passed directly via POST. When sent from the Email Reports
+    // page after navigation (cross-page flow), admin_id is 0 because the JS
+    // variable was lost on page load. In this case, use the admin_id stored
+    // in the most recent pending session entry, which was persisted when the
+    // update ran. Fall back to the site's default admin if neither is set.
+    if ( ! $admin_id ) {
+        $pending_for_admin = get_option( 'wpmm_pending_sessions', [] );
+        if ( ! empty( $pending_for_admin ) ) {
+            // Use the most recent session's admin_id.
+            $last_pending = end( $pending_for_admin );
+            $admin_id     = absint( $last_pending['admin_id'] ?? 0 );
+        }
+        if ( ! $admin_id ) {
+            $s        = wpmm_get_settings();
+            $admin_id = absint( $s['default_admin_id'] ?? 0 );
+        }
+    }
 
     if ( ! is_email( $to ) ) {
         wp_send_json_error( 'Invalid email address.' );

@@ -675,7 +675,14 @@ For licensing enquiries contact: tony@digitalstrategyworks.com
   captured while switch_to_blog() was active.
 * Fix: Removed blocking wp_update_plugins() and wp_update_themes()
   calls from wpmm_get_available_updates() which is called from AJAX.
-  These caused HTTP 500 on managed hosting (Kinsta, WP Engine). Previously all of these were read from the main
+  These caused HTTP 500 on managed hosting (Kinsta, WP Engine).
+* Fix: Performing administrator no longer lost on page navigation
+  (Codex audit issue #5). The admin_id selected on the Updates page
+  is now stored in wpmm_pending_sessions alongside the session_id.
+  When the email is sent from the Email Reports page (cross-page flow),
+  the stored admin_id is read from the most recent pending session
+  rather than defaulting to 0. Falls back to the site default admin
+  if no session admin_id is available. Previously all of these were read from the main
   site regardless of which site was selected in the scope bar.
 
 = 2.1.7 =

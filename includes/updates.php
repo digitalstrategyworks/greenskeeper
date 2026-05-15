@@ -530,12 +530,16 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
     // even when plugins and themes were updated in separate sessions.
     //
     // wpmm_pending_sessions stores an array of sessions run since the last
-    // email was sent. Each entry has: session_id, blog_id, updated_at.
+    // email was sent. Each entry has: session_id, blog_id, updated_at, admin_id.
+    // admin_id is stored here so the performing administrator is preserved
+    // across page navigation — fixing Codex audit issue #5.
     // wpmm_last_session is kept in sync for backward compatibility.
     if ( $session_id ) {
         $pending   = get_option( 'wpmm_pending_sessions', [] );
         $blog_id   = get_current_blog_id();
         $timestamp = current_time( 'mysql' );
+        // admin_id is passed from the AJAX handler via $GLOBALS.
+        $admin_id  = absint( $GLOBALS['wpmm_performing_admin_id'] ?? 0 );
 
         // Add this session if it's not already in the list.
         $already = false;
@@ -550,6 +554,7 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
                 'session_id' => $session_id,
                 'blog_id'    => $blog_id,
                 'updated_at' => $timestamp,
+                'admin_id'   => $admin_id,
             ];
             update_option( 'wpmm_pending_sessions', $pending, false );
         }
