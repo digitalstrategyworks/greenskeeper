@@ -666,7 +666,16 @@ For licensing enquiries contact: tony@digitalstrategyworks.com
   the Email Reports page now switches to that site's context before
   reading the recipient email, site name, site URL (for the subject
   line), pending sessions, last session, default administrator, and
-  email log history. Previously all of these were read from the main
+  email log history.
+* Fix: Scoped update filtering no longer applied in wrong blog context
+  (Codex audit issue #4). A redundant second filtering pass read
+  active_plugins and active theme AFTER restore_current_blog() was
+  called, filtering against the main site instead of the selected site.
+  Removed — the first pass already filters correctly using values
+  captured while switch_to_blog() was active.
+* Fix: Removed blocking wp_update_plugins() and wp_update_themes()
+  calls from wpmm_get_available_updates() which is called from AJAX.
+  These caused HTTP 500 on managed hosting (Kinsta, WP Engine). Previously all of these were read from the main
   site regardless of which site was selected in the scope bar.
 
 = 2.1.7 =

@@ -30,10 +30,14 @@ function wpmm_get_available_updates( $site_id = 0 ) {
         $switched = false;
     }
 
-    // Force a fresh check from the WordPress.org API.
-    wp_version_check( [], true );
-    wp_update_plugins();
-    wp_update_themes();
+    // Do NOT call wp_update_plugins() or wp_update_themes() here.
+    // This function is called from wpmm_ajax_get_updates() which runs inside
+    // an AJAX request. On managed hosting (Kinsta, WP Engine), these calls
+    // make loopback HTTP requests that are blocked by the server, causing
+    // HTTP 500. The transients are populated by WordPress core's own cron
+    // and are sufficiently fresh for our purposes. If they are empty,
+    // the update lists will show as empty — the user can reload the page.
+    // See v2.0.9 release notes for full explanation.
 
     $result = [ 'core' => [], 'plugins' => [], 'themes' => [], 'site_id' => $site_id ];
 
@@ -120,29 +124,14 @@ function wpmm_get_available_updates( $site_id = 0 ) {
         }
     }
 
-    // Filter plugins/themes to those activated on the target site.
-    if ( is_multisite() && $site_id > 0 ) {
-        $active_plugins = get_option( 'active_plugins', [] );
-        $result['plugins'] = array_values( array_filter(
-            $result['plugins'],
-            function( $p ) use ( $active_plugins ) {
-                return in_array( $p['slug'], $active_plugins, true );
-            }
-        ) );
-
-        // Active theme for this site.
-        $active_theme_slug = get_stylesheet();
-        $result['themes'] = array_values( array_filter(
-            $result['themes'],
-            function( $t ) use ( $active_theme_slug ) {
-                return $t['slug'] === $active_theme_slug;
-            }
-        ) );
-    }
-
-    if ( $switched ) {
-        restore_current_blog();
-    }
+    // Note: plugin and theme filtering by selected site is already applied
+    // above in the foreach loops via $active_plugins_for_site and
+    // $active_theme_for_site — both captured while switch_to_blog() was active.
+    // The previously present second filtering pass here was reading
+    // get_option('active_plugins') and get_stylesheet() AFTER restore_current_blog()
+    // had been called, meaning it was filtering against the main site's data
+    // rather than the selected site's — causing valid updates to be hidden or
+    // incorrect updates to be shown (Codex audit issue #4). Removed.
 
     return $result;
 }
