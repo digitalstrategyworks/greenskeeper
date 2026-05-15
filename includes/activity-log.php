@@ -78,8 +78,26 @@ function wpmm_log_activity( $event, $category, $summary, $context = [], $user_id
         $raw_ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
     }
 
-    $store_full_ip = ! empty( $s['activity_log_full_ip'] );
+    $store_full_ip = ( isset( $s['activity_log_full_ip'] ) && true === (bool) $s['activity_log_full_ip'] );
     $ip            = $store_full_ip ? $raw_ip : wpmm_anonymise_ip( $raw_ip );
+
+    // Safety net: if anonymisation returned empty (unrecognised IP format),
+    // store a clear placeholder rather than the raw IP.
+    if ( ! $store_full_ip && empty( $ip ) && ! empty( $raw_ip ) ) {
+        $ip = '0.0.0.0';
+    }
+
+    // ── Temporary debug — always writes regardless of WP_DEBUG setting ────────
+    $debug_file = WP_CONTENT_DIR . '/greenskeeper-debug.log';
+    $debug_line = gmdate( 'Y-m-d H:i:s' ) . ' | event=' . $event
+        . ' | raw_ip=' . $raw_ip
+        . ' | stored_ip=' . $ip
+        . ' | full_ip_setting=' . var_export( $s['activity_log_full_ip'] ?? 'NOT_SET', true )
+        . ' | store_full_ip=' . var_export( $store_full_ip, true )
+        . "\n";
+    // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+    file_put_contents( $debug_file, $debug_line, FILE_APPEND );
+    // ─────────────────────────────────────────────────────────────────────────
 
     // ── Context sanitisation ───────────────────────────────────────────────────
     // Never store passwords, secrets, or capability keys in context.
@@ -132,23 +150,55 @@ function wpmm_anonymise_ip( $ip ) {
         return '';
     }
 
-    // IPv6
-    if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
-        $bin  = inet_pton( $ip );
-        if ( $bin === false ) { return ''; }
-        // Zero the last 10 bytes (80 bits) of the 16-byte address.
-        $bin  = substr( $bin, 0, 6 ) . str_repeat( "\x00", 10 );
-        return inet_ntop( $bin ) ?: '';
+    $ip = trim( $ip );
+
+    // Handle IPv4-mapped IPv6 addresses (e.g. ::ffff:192.168.1.100).
+    // These fail both FILTER_FLAG_IPV4 and FILTER_FLAG_IPV6 checks.
+    if ( strpos( $ip, '::ffff:' ) === 0 || strpos( $ip, '::FFFF:' ) === 0 ) {
+        $ipv4 = substr( $ip, 7 );
+        if ( filter_var( $ipv4, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
+            $parts    = explode( '.', $ipv4 );
+            $parts[3] = '0';
+            return '::ffff:' . implode( '.', $parts );
+        }
     }
 
-    // IPv4
+    // IPv6 — zero the last 10 bytes (80 bits).
+    if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+        $bin = inet_pton( $ip );
+        if ( $bin === false ) { return wpmm_anonymise_ip_fallback( $ip ); }
+        $bin = substr( $bin, 0, 6 ) . str_repeat( "\x00", 10 );
+        $result = inet_ntop( $bin );
+        return $result !== false ? $result : wpmm_anonymise_ip_fallback( $ip );
+    }
+
+    // IPv4 — zero the last octet.
     if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
         $parts    = explode( '.', $ip );
         $parts[3] = '0';
         return implode( '.', $parts );
     }
 
-    return '';
+    // Unrecognised format — return a safe placeholder rather than empty string
+    // so the log row still shows something instead of a confusing blank.
+    return wpmm_anonymise_ip_fallback( $ip );
+}
+
+/**
+ * Fallback anonymisation for unrecognised IP formats.
+ * Keeps the first two segments and replaces the rest with zeroes.
+ *
+ * @param  string $ip Raw IP string.
+ * @return string     Partially masked IP.
+ */
+function wpmm_anonymise_ip_fallback( $ip ) {
+    // For anything we can't parse, mask everything after the first dot/colon.
+    $sep = strpos( $ip, ':' ) !== false ? ':' : '.';
+    $parts = explode( $sep, $ip );
+    if ( count( $parts ) >= 2 ) {
+        return $parts[0] . $sep . $parts[1] . $sep . '*.0';
+    }
+    return '0.0.0.0';
 }
 
 // ── GDPR: Daily retention purge ────────────────────────────────────────────────
@@ -270,17 +320,52 @@ add_action( 'user_register', function ( $user_id ) {
 } );
 
 /**
- * User deleted.
+ * User deleted — single site.
+ * Note: on single site the $user object is passed as the third parameter.
+ * On multisite, use wpmu_delete_user instead (see below).
  */
 add_action( 'deleted_user', function ( $user_id, $reassign, $user ) {
+    $login = $user instanceof WP_User ? $user->user_login : "ID:{$user_id}";
+    $email = $user instanceof WP_User ? $user->user_email : '';
     wpmm_log_activity(
         'user_deleted',
         WPMM_ACTIVITY_USER,
-        sprintf( 'User account deleted: "%s".', $user->user_login ),
-        [ 'deleted_user_email' => $user->user_email ],
+        sprintf( 'User account deleted: "%s".', $login ),
+        [ 'deleted_user_email' => $email ],
         get_current_user_id()
     );
 }, 10, 3 );
+
+/**
+ * User deleted — multisite network (fires when a user is removed from the network).
+ * wpmu_delete_user fires before the user row is deleted so we can still read their data.
+ */
+add_action( 'wpmu_delete_user', function ( $user_id ) {
+    $u = get_user_by( 'id', $user_id );
+    wpmm_log_activity(
+        'user_deleted',
+        WPMM_ACTIVITY_USER,
+        sprintf( 'Network user account deleted: "%s".', $u ? $u->user_login : "ID:{$user_id}" ),
+        [ 'deleted_user_email' => $u ? $u->user_email : '' ],
+        get_current_user_id()
+    );
+} );
+
+/**
+ * User removed from a specific site in a multisite network.
+ * Different from wpmu_delete_user — the user still exists on the network
+ * but is no longer a member of this site.
+ */
+add_action( 'remove_user_from_blog', function ( $user_id, $blog_id ) {
+    $u = get_user_by( 'id', $user_id );
+    wpmm_log_activity(
+        'user_removed_from_site',
+        WPMM_ACTIVITY_USER,
+        sprintf( 'User "%s" removed from site (blog ID %d).', $u ? $u->user_login : "ID:{$user_id}", $blog_id ),
+        [ 'blog_id' => $blog_id ],
+        get_current_user_id()
+    );
+}, 10, 2 );
 
 /**
  * User role changed.
@@ -371,7 +456,7 @@ add_action( 'deleted_plugin', function ( $plugin_file, $deleted ) {
 }, 10, 2 );
 
 /**
- * Theme switched.
+ * Theme switched (single site).
  */
 add_action( 'switch_theme', function ( $new_name, $new_theme, $old_theme ) {
     wpmm_log_activity(
@@ -381,6 +466,35 @@ add_action( 'switch_theme', function ( $new_name, $new_theme, $old_theme ) {
         [ 'old_theme' => $old_theme->get( 'Name' ), 'new_theme' => $new_name ]
     );
 }, 10, 3 );
+
+/**
+ * Theme enabled for network (multisite).
+ * Fires when a theme is network-enabled via Network Admin → Themes.
+ */
+add_action( 'enable_theme', function ( $stylesheet ) {
+    $theme = wp_get_theme( $stylesheet );
+    $name  = $theme->get( 'Name' ) ?: $stylesheet;
+    wpmm_log_activity(
+        'theme_network_enabled',
+        WPMM_ACTIVITY_SITE,
+        sprintf( 'Theme "%s" enabled for the network.', $name ),
+        [ 'theme' => $stylesheet ]
+    );
+} );
+
+/**
+ * Theme disabled for network (multisite).
+ */
+add_action( 'disable_theme', function ( $stylesheet ) {
+    $theme = wp_get_theme( $stylesheet );
+    $name  = $theme->get( 'Name' ) ?: $stylesheet;
+    wpmm_log_activity(
+        'theme_network_disabled',
+        WPMM_ACTIVITY_SITE,
+        sprintf( 'Theme "%s" disabled for the network.', $name ),
+        [ 'theme' => $stylesheet ]
+    );
+} );
 
 /**
  * WordPress core updated.
@@ -396,15 +510,49 @@ add_action( '_core_updated_successfully', function ( $wp_version ) {
 } );
 
 /**
- * Greenskeeper settings saved.
- * Log when any Greenskeeper setting is changed so there's an audit trail.
+ * Greenskeeper settings saved — log which fields actually changed.
  */
 add_action( 'update_option_wpmm_settings', function ( $old_value, $new_value ) {
+    // Build a human-readable list of what changed.
+    $labels = [
+        'activity_log_enabled'        => 'Site Activity Log enabled',
+        'activity_log_retention_days' => 'Activity log retention period',
+        'activity_log_full_ip'        => 'Full IP address storage',
+        'company_name'                => 'Company name',
+        'client_email'                => 'Client email',
+        'logo_url'                    => 'Agency logo',
+        'default_admin_id'            => 'Default administrator',
+        'smtp_mailer'                 => 'Email mailer',
+        'smtp_host'                   => 'SMTP host',
+        'spam_filter_enabled'         => 'Spam filter enabled',
+        'akismet_key'                 => 'Akismet API key',
+    ];
+
+    $changed = [];
+    foreach ( $labels as $key => $label ) {
+        $old = $old_value[ $key ] ?? null;
+        $new = $new_value[ $key ] ?? null;
+        if ( $old !== $new ) {
+            // For boolean-like fields show on/off rather than 1/0.
+            if ( in_array( $key, [ 'activity_log_enabled', 'activity_log_full_ip', 'spam_filter_enabled' ], true ) ) {
+                $changed[] = $label . ': ' . ( $new ? 'enabled' : 'disabled' );
+            } elseif ( $key === 'akismet_key' ) {
+                $changed[] = $label . ' updated';
+            } else {
+                $changed[] = $label;
+            }
+        }
+    }
+
+    $summary = ! empty( $changed )
+        ? 'Greenskeeper settings updated: ' . implode( ', ', $changed ) . '.'
+        : 'Greenskeeper settings saved (no tracked fields changed).';
+
     wpmm_log_activity(
         'greenskeeper_settings_saved',
         WPMM_ACTIVITY_SITE,
-        'Greenskeeper settings updated.',
-        []
+        $summary,
+        [ 'changed_fields' => implode( ', ', $changed ) ]
     );
 }, 10, 2 );
 

@@ -10,10 +10,14 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  */
 function wpmm_get_settings() {
     $defaults = [
-        'company_name'     => '',
-        'logo_url'         => '',
-        'client_email'     => get_option( 'wpmm_client_email', '' ),
-        'default_admin_id' => 0,
+        'company_name'                => '',
+        'logo_url'                    => '',
+        'client_email'                => get_option( 'wpmm_client_email', '' ),
+        'default_admin_id'            => 0,
+        // Activity log defaults — explicit 0/1 integers prevent ambiguous null/missing/bool state.
+        'activity_log_enabled'        => 0,
+        'activity_log_full_ip'        => 0,  // 0 = anonymise (GDPR default)
+        'activity_log_retention_days' => 90,
     ];
     // Allow other modules (e.g. spam-filter.php) to register their own defaults.
     $defaults = apply_filters( 'wpmm_settings_defaults', $defaults );

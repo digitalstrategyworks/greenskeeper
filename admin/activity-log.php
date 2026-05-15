@@ -53,23 +53,35 @@ function wpmm_render_activity_log() {
 
         <!-- Toolbar -->
         <div class="wpmm-card wpmm-activity-toolbar" style="margin-bottom:16px;">
-            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                <select id="wpmm-activity-category" class="wpmm-input" style="width:180px;">
+            <!-- Row 1: filters — full width so Reset aligns with Clear Log -->
+            <div style="display:flex;align-items:center;gap:10px;">
+                <select id="wpmm-activity-category" class="wpmm-input" style="width:160px;flex-shrink:0;">
                     <option value="">All Categories</option>
                     <option value="authentication">Authentication</option>
                     <option value="user_management">User Management</option>
                     <option value="site_change">Site Changes</option>
                 </select>
-                <input type="text" id="wpmm-activity-search" class="wpmm-input" style="width:220px;"
+                <input type="text" id="wpmm-activity-search" class="wpmm-input" style="flex:1;min-width:0;"
                        placeholder="Search events, users, IPs&hellip;">
-                <input type="date" id="wpmm-activity-from" class="wpmm-input" style="width:145px;" title="From date">
-                <span style="color:var(--wpmm-gray);">to</span>
-                <input type="date" id="wpmm-activity-to" class="wpmm-input" style="width:145px;" title="To date">
-                <button type="button" id="wpmm-activity-filter-btn" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm">
+                <input type="date" id="wpmm-activity-from" class="wpmm-input" style="width:138px;flex-shrink:0;" title="From date">
+                <span style="color:var(--wpmm-gray);flex-shrink:0;">to</span>
+                <input type="date" id="wpmm-activity-to" class="wpmm-input" style="width:138px;flex-shrink:0;" title="To date">
+                <button type="button" id="wpmm-activity-filter-btn" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm" style="flex-shrink:0;">
                     <span class="dashicons dashicons-filter"></span> Filter
                 </button>
-                <button type="button" id="wpmm-activity-reset-btn" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm">Reset</button>
-                <div style="margin-left:auto;display:flex;gap:8px;">
+                <button type="button" id="wpmm-activity-reset-btn" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm" style="flex-shrink:0;">Reset</button>
+            </div>
+            <!-- Row 2: per-page + action buttons always on same line -->
+            <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+                <label style="font-size:13px;color:var(--wpmm-text-light);">Show:</label>
+                <select id="wpmm-activity-per-page" class="wpmm-input" style="width:80px;">
+                    <option value="25">25</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                </select>
+                <span style="font-size:13px;color:var(--wpmm-text-light);">entries per page</span>
+                <span id="wpmm-activity-count" style="font-size:13px;color:var(--wpmm-gray);"></span>
+                <div style="margin-left:auto;display:flex;gap:8px;flex-shrink:0;">
                     <button type="button" id="wpmm-activity-export-btn"
                             class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm"
                             data-nonce="<?php echo esc_attr( wp_create_nonce( 'wpmm_nonce' ) ); ?>">
@@ -81,16 +93,6 @@ function wpmm_render_activity_log() {
                         <span class="dashicons dashicons-trash"></span> Clear Log
                     </button>
                 </div>
-            </div>
-            <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
-                <label style="font-size:13px;color:var(--wpmm-text-light);">Show:</label>
-                <select id="wpmm-activity-per-page" class="wpmm-input" style="width:80px;">
-                    <option value="25">25</option>
-                    <option value="50" selected>50</option>
-                    <option value="100">100</option>
-                </select>
-                <span style="font-size:13px;color:var(--wpmm-text-light);">entries per page</span>
-                <span id="wpmm-activity-count" style="margin-left:auto;font-size:13px;color:var(--wpmm-gray);"></span>
             </div>
         </div>
 
@@ -128,6 +130,7 @@ function wpmm_render_activity_log() {
                             <th>Event</th>
                             <th style="width:130px;">User</th>
                             <th style="width:120px;">IP Address</th>
+                            <th style="width:36px;" title="View detail"></th>
                         </tr>
                     </thead>
                     <tbody id="wpmm-activity-tbody"></tbody>

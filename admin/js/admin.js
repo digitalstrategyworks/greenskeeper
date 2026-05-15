@@ -1862,11 +1862,14 @@ jQuery(function ($) {
         var $msg = $('#wpmm-activity-settings-msg');
         $msg.html('<span style="color:var(--wpmm-gray);">Saving&hellip;</span>');
         $.post(wpmm.ajax_url, {
-            action:                      'wpmm_save_settings',
-            nonce:                       wpmm.nonce,
-            activity_log_enabled:        $('#wpmm-activity-enabled').is(':checked') ? 1 : 0,
-            activity_log_retention_days: $('#wpmm-activity-retention').val() || 90,
-            activity_log_full_ip:        $('#wpmm-activity-full-ip').is(':checked') ? 1 : 0,
+            action:                         'wpmm_save_settings',
+            nonce:                          wpmm.nonce,
+            activity_log_enabled:           $('#wpmm-activity-enabled').is(':checked') ? 1 : 0,
+            activity_log_retention_days:    $('#wpmm-activity-retention').val() || 90,
+            // Always send explicitly — unchecked checkboxes are otherwise absent
+            // from the POST data, making it impossible to detect a toggle-off.
+            activity_log_full_ip:           $('#wpmm-activity-full-ip').is(':checked') ? 1 : 0,
+            activity_log_full_ip_submitted: 1, // sentinel so server knows this field was intentionally included
         }, function (res) {
             $btn.prop('disabled', false);
             if (res.success) {
@@ -1891,12 +1894,12 @@ jQuery(function ($) {
         var currentTotal = 0;
         var selectedIds  = [];
 
-        // ── Category badge colours ──────────────────────────────────────────
+        // ── Category badge colours (#7 — all three categories styled) ─────────
         var categoryStyles = {
-            'authentication': { bg:'#eff6ff', color:'#1d4ed8', label:'Authentication' },
+            'authentication':  { bg:'#eff6ff', color:'#1d4ed8', label:'Authentication' },
             'user_management': { bg:'#f5f3ff', color:'#6d28d9', label:'User Management' },
-            'site_change':    { bg:'#f0fdf4', color:'#166534', label:'Site Changes' },
-            'content':        { bg:'#fff7ed', color:'#c2410c', label:'Content' },
+            'site_change':     { bg:'#f0fdf4', color:'#166534', label:'Site Changes' },
+            'content':         { bg:'#fff7ed', color:'#c2410c', label:'Content' },
         };
 
         // ── Event icon map ──────────────────────────────────────────────────
@@ -1974,7 +1977,7 @@ jQuery(function ($) {
 
                     html += '<tr data-id="' + escHtml(row.id) + '" class="wpmm-activity-row' +
                             (isFail ? ' wpmm-activity-row-warn' : '') + '" ' +
-                            'style="cursor:pointer;' + (isFail ? 'background:#fffbeb;' : '') + '">' +
+                            'style="' + (isFail ? 'background:#fffbeb;' : '') + '">' +
                             '<td style="padding:10px 12px;" onclick="event.stopPropagation();">' +
                             '<input type="checkbox" class="wpmm-activity-cb" value="' + escHtml(row.id) + '">' +
                             '</td>' +
@@ -1993,6 +1996,12 @@ jQuery(function ($) {
                             '</td>' +
                             '<td style="padding:10px 12px;font-size:12px;font-family:monospace;color:var(--wpmm-gray);">' +
                             escHtml(row.ip_address || '—') + '</td>' +
+                            // #5 — info icon makes the detail drawer discoverable
+                            '<td style="padding:10px 12px;text-align:center;width:36px;">' +
+                            '<button class="wpmm-activity-detail-btn" title="View event detail" ' +
+                            'style="background:none;border:none;cursor:pointer;color:var(--wpmm-blue2);padding:0;">' +
+                            '<span class="dashicons dashicons-info" style="font-size:16px;width:16px;height:16px;"></span>' +
+                            '</button></td>' +
                             '</tr>';
                 });
 
@@ -2026,27 +2035,25 @@ jQuery(function ($) {
             loadActivity(parseInt($(this).data('page'), 10));
         });
 
-        // ── Row click → detail drawer ───────────────────────────────────────
-        $(document).on('click', '.wpmm-activity-row', function () {
-            var $row  = $(this);
+        // ── Row click → detail drawer (#5 — triggered by ℹ button) ────────────
+        $(document).on('click', '.wpmm-activity-detail-btn', function (e) {
+            e.stopPropagation();
+            var $row  = $(this).closest('tr');
             var id    = $row.data('id');
             var cells = $row.find('td');
 
-            var ctx   = '';
-            // Find the matching row data from the last response — simplest approach
-            // is to re-read from the DOM cells we rendered.
             var content =
                 '<dl style="margin:0;">' +
-                '<dt style="font-weight:700;color:var(--wpmm-blue);margin-bottom:2px;">Date</dt>' +
-                '<dd style="margin:0 0 14px;font-size:13px;">' + escHtml($(cells[1]).text()) + '</dd>' +
+                '<dt style="font-weight:700;color:var(--wpmm-blue);margin-bottom:2px;">Date &amp; Time</dt>' +
+                '<dd style="margin:0 0 14px;font-size:13px;">' + escHtml($(cells[1]).text().trim()) + '</dd>' +
                 '<dt style="font-weight:700;color:var(--wpmm-blue);margin-bottom:2px;">Category</dt>' +
                 '<dd style="margin:0 0 14px;">' + $(cells[2]).html() + '</dd>' +
                 '<dt style="font-weight:700;color:var(--wpmm-blue);margin-bottom:2px;">Event</dt>' +
                 '<dd style="margin:0 0 14px;font-size:13px;">' + escHtml($(cells[3]).text().trim()) + '</dd>' +
                 '<dt style="font-weight:700;color:var(--wpmm-blue);margin-bottom:2px;">User</dt>' +
-                '<dd style="margin:0 0 14px;font-size:13px;">' + $(cells[4]).html() + '</dd>' +
+                '<dd style="margin:0 0 14px;font-size:13px;">' + ($(cells[4]).html() || '—') + '</dd>' +
                 '<dt style="font-weight:700;color:var(--wpmm-blue);margin-bottom:2px;">IP Address</dt>' +
-                '<dd style="margin:0 0 14px;font-size:13px;font-family:monospace;">' + escHtml($(cells[5]).text()) + '</dd>' +
+                '<dd style="margin:0 0 14px;font-size:13px;font-family:monospace;">' + escHtml($(cells[5]).text().trim()) + '</dd>' +
                 '</dl>' +
                 '<hr style="border:none;border-top:1px solid var(--wpmm-border);margin:8px 0 16px;">' +
                 '<p style="font-size:12px;color:var(--wpmm-gray);margin:0;">Event ID: ' + escHtml(String(id)) + '</p>';
@@ -2155,4 +2162,4 @@ jQuery(function ($) {
 
     })();
 
-
+}); // end jQuery ready

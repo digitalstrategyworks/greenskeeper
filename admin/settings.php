@@ -106,10 +106,38 @@ function wpmm_ajax_save_settings() {
     }
     if ( array_key_exists( 'activity_log_retention_days', $_POST ) ) {
         $days = absint( $_POST['activity_log_retention_days'] );
-        $s['activity_log_retention_days'] = min( $days, 3650 ); // cap at 10 years
+        $s['activity_log_retention_days'] = min( $days, 3650 );
     }
-    if ( array_key_exists( 'activity_log_full_ip', $_POST ) ) {
-        $s['activity_log_full_ip'] = (bool) absint( $_POST['activity_log_full_ip'] );
+    // Only process full_ip when the activity settings form was submitted
+    // (identified by the sentinel field). This prevents other settings saves
+    // from accidentally triggering the retroactive anonymisation.
+    if ( ! empty( $_POST['activity_log_full_ip_submitted'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        // Store as integer 1/0, not bool, to avoid wp_parse_args serialisation ambiguity.
+        $new_full_ip = ! empty( $_POST['activity_log_full_ip'] ) ? 1 : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $old_full_ip = (int) ( $s['activity_log_full_ip'] ?? 0 );
+
+        if ( $old_full_ip === 1 && $new_full_ip === 0 ) {
+            // Retroactively anonymise all stored IP addresses.
+            global $wpdb;
+            $activity_table = esc_sql( $wpdb->prefix . 'wpmm_activity_log' );
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+            $rows = $wpdb->get_results( 'SELECT id, ip_address FROM ' . $activity_table . ' WHERE ip_address != ""' );
+            foreach ( $rows as $row ) {
+                $anon = wpmm_anonymise_ip( $row->ip_address );
+                if ( $anon !== $row->ip_address ) {
+                    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+                    $wpdb->update(
+                        $activity_table,
+                        [ 'ip_address' => $anon ],
+                        [ 'id' => $row->id ],
+                        [ '%s' ],
+                        [ '%d' ]
+                    );
+                }
+            }
+        }
+
+        $s['activity_log_full_ip'] = $new_full_ip;
     }
 
     wpmm_save_settings( $s );
