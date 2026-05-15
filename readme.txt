@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.1.7
+Stable tag:        2.1.8
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -659,6 +659,15 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.1.8 =
+* Fix: Email Reports scope selector now honored on multisite (Codex
+  audit issue #3). When a specific site is selected in Network Admin,
+  the Email Reports page now switches to that site's context before
+  reading the recipient email, site name, site URL (for the subject
+  line), pending sessions, last session, default administrator, and
+  email log history. Previously all of these were read from the main
+  site regardless of which site was selected in the scope bar.
 
 = 2.1.7 =
 * Feature: Site Activity Log — a new dedicated admin page that tracks and

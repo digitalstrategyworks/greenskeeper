@@ -1569,11 +1569,32 @@ function wpmm_render_email() {
         : 0;
     global $wpdb;
 
+    // ── Switch to the selected site context for ALL site-specific reads ───────
+    // This ensures the recipient email, subject, sessions, log entries, and
+    // administrator shown on the Email Reports page reflect the selected site,
+    // not the current/main site — fixing Codex audit issue #3.
+    $email_scope_switched = false;
+    if ( wpmm_is_network_context() && $wpmm_email_scope_id > 0 ) {
+        switch_to_blog( $wpmm_email_scope_id );
+        $email_scope_switched = true;
+    }
+
     $saved_email  = get_option( 'wpmm_client_email', '' );
+    $site_name    = get_bloginfo( 'name' );
+    $site_url     = get_bloginfo( 'url' );
+    $ls           = get_option( 'wpmm_last_session', [] );
+    $pending      = get_option( 'wpmm_pending_sessions', [] );
+    $perf_admin   = wpmm_get_default_admin();
+    $admin_email  = get_option( 'admin_email' );
     $email_table  = esc_sql( $wpdb->prefix . 'wpmm_email_log' );
     $email_rows   = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
         "SELECT * FROM {$email_table} ORDER BY sent_at DESC LIMIT 50" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
     );
+
+    if ( $email_scope_switched ) {
+        restore_current_blog();
+    }
+    // ─────────────────────────────────────────────────────────────────────────
     ?>
     <div class="wpmm-wrap">
         <?php wpmm_page_header( WPMM_SLUG_EMAIL ); ?>
@@ -1610,9 +1631,9 @@ function wpmm_render_email() {
                 <div class="wpmm-form-row">
                     <label for="wpmm-email-subject-tab">Subject</label>
                     <input type="text" id="wpmm-email-subject-tab"
-                        value="<?php echo esc_attr( get_bloginfo('name') . ' [' . get_bloginfo('url') . '] Weekly WordPress Upgrades and Maintenance' ); ?>"
+                        value="<?php echo esc_attr( $site_name . ' [' . $site_url . '] Weekly WordPress Upgrades and Maintenance' ); ?>"
                         class="wpmm-input"
-                        data-base-subject="<?php echo esc_attr( get_bloginfo('name') . ' [' . get_bloginfo('url') . '] Weekly WordPress Upgrades and Maintenance' ); ?>">
+                        data-base-subject="<?php echo esc_attr( $site_name . ' [' . $site_url . '] Weekly WordPress Upgrades and Maintenance' ); ?>">
                 </div>
 
                 <div class="wpmm-form-row">
@@ -1637,16 +1658,13 @@ function wpmm_render_email() {
                     <p><strong>Email Template</strong></p>
                     <div class="wpmm-email-meta">
                         <?php
-                        $ls      = get_option( 'wpmm_last_session', [] );
-                        $pending = get_option( 'wpmm_pending_sessions', [] );
-                        $perf_admin = wpmm_get_default_admin();
                         if ( $perf_admin ) {
                             $first_name = get_user_meta( $perf_admin->ID, 'first_name', true );
                             $last_name  = get_user_meta( $perf_admin->ID, 'last_name',  true );
                             $full_name  = trim( $first_name . ' ' . $last_name ) ?: $perf_admin->display_name;
                             $from_label = $full_name . ' <' . $perf_admin->user_email . '>';
                         } else {
-                            $from_label = get_option( 'admin_email' );
+                            $from_label = $admin_email;
                         }
                         ?>
                         <span><strong>From:</strong> <?php echo esc_html( $from_label ); ?></span>

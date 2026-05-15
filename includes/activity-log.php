@@ -87,18 +87,6 @@ function wpmm_log_activity( $event, $category, $summary, $context = [], $user_id
         $ip = '0.0.0.0';
     }
 
-    // ── Temporary debug — always writes regardless of WP_DEBUG setting ────────
-    $debug_file = WP_CONTENT_DIR . '/greenskeeper-debug.log';
-    $debug_line = gmdate( 'Y-m-d H:i:s' ) . ' | event=' . $event
-        . ' | raw_ip=' . $raw_ip
-        . ' | stored_ip=' . $ip
-        . ' | full_ip_setting=' . var_export( $s['activity_log_full_ip'] ?? 'NOT_SET', true )
-        . ' | store_full_ip=' . var_export( $store_full_ip, true )
-        . "\n";
-    // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-    file_put_contents( $debug_file, $debug_line, FILE_APPEND );
-    // ─────────────────────────────────────────────────────────────────────────
-
     // ── Context sanitisation ───────────────────────────────────────────────────
     // Never store passwords, secrets, or capability keys in context.
     $safe_keys = [ 'plugin', 'theme', 'version', 'old_version', 'new_version',

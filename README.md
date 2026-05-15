@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.1.7  
+**Version:** 2.1.8  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -861,6 +861,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.1.8
+- Fix: Email Reports scope selector now honored on multisite — switches to selected site context for all reads (Codex #3)
 
 ### 2.1.7
 - Feature: Site Activity Log — tracks logins, user changes, plugin/theme changes with GDPR-compliant IP anonymisation, configurable retention, CSV export
