@@ -705,6 +705,99 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.1.9
+- Feature: Update Log "Send Report →" button navigates to Email Reports pre-loaded with that session's data
+- Feature: Resend flow — amber notice when a session was previously sent, subject prefixed with [Updated Report], email body includes blue "Updated Report" banner with original send date and time
+- Fix: Manual updates now always combined with automated session log entries in the email body — previously adding manual entries caused only manual entries to appear
+
+### 2.1.8
+- Fix: Email Reports scope selector now honored on multisite — all site-specific data (recipient, subject, sessions, log history, administrator) read from selected site context via switch_to_blog() (Codex audit #3)
+- Fix: Scoped update filtering removed redundant second pass that read active_plugins and stylesheet after restore_current_blog() — was filtering against main site instead of selected site (Codex audit #4)
+- Fix: Performing administrator now persists across page navigation — admin_id stored in wpmm_pending_sessions at update time, read back when email is sent from Email Reports page (Codex audit #5)
+- Fix: Removed blocking wp_update_plugins/themes() from AJAX-callable scan function — caused HTTP 500 on managed hosting
+
+### 2.1.7
+- Feature: Site Activity Log — tracks logins, failed attempts, logouts, password resets, user creation/deletion/role changes, plugin activation/deactivation/deletion, theme switches, network theme enable/disable, WordPress core updates, key option changes
+- GDPR compliance: IP addresses anonymised by default (IPv4 last octet, IPv6 last 80 bits), configurable retention (default 90 days) with daily auto-purge, CSV export for Subject Access Requests, bulk delete, full IP opt-in
+- Fix: IPv4-mapped IPv6 addresses (::ffff:x.x.x.x) now correctly anonymised
+- Fix: full IP toggle-off retroactively anonymises all stored IPs
+- Fix: toolbar layout — Export CSV and Clear Log on dedicated row, never wraps
+- Fix: user deletion logged on single site, multisite network (wpmu_delete_user), and per-site removal (remove_user_from_blog)
+- Fix: Greenskeeper settings changes now log specific field names and values
+- Fix: JS syntax error (missing closing brace) that silently broke all JS when Autoptimize was active
+- Fix: Save Activity Settings button now works on the Settings page
+- Fix: Site Activity disabled state renders within standard page chrome with full sub-navigation
+
+### 2.1.6
+- Feature: Administrator notes stored permanently in email log — always visible in historical previews regardless of template changes
+- New note column in wpmm_email_log with ALTER TABLE upgrade path for existing installs
+- Preview modal shows amber "Note from administrator" block for emails with notes; grey informational block for pre-v2.1.6 emails
+
+### 2.1.5
+- Fix: iThemes Security Pro, Google Site Kit, ShortPixel not restored after self-deactivating during update — added priority-99 upgrader_process_complete hook that fires after all plugin-specific hooks complete
+- Fix: Update Notes field content moved to top of email body so clients see it immediately
+- Fix: Failed update rows in email now use amber "Needs Attention" styling instead of alarming red — license-gated plugins get client-friendly messaging, DEBUG strings stripped
+
+### 2.1.4
+- Fix: PHP Warning "Undefined variable $api_key" on Settings page
+- Fix: Email reports only showing most recent session — pending sessions always cleared on successful send
+- Fix: WooCommerce and hook-sensitive plugins (WP Rocket, Wordfence, Really Simple SSL) now fully restored after collateral deactivation via activate_plugin()
+- Fix: Sent Email History row appears immediately when email_id is 0 (multisite blog context mismatch)
+- Fix: Collateral restore warning no longer expands the Updated button — moved to separate amber notice row that fades after 12 seconds
+- Feature: WordPress dashboard menu icon updated from shield to golf flag
+
+### 2.1.3
+- Fix: HTTP 500 from WP Offload Media Pro (Delicious Brains updater) throwing ValueError during Plugin_Upgrader::upgrade() — all four upgrader calls now wrapped in try/catch Throwable
+- Fix: HTTP 500 on some multisite networks — per-site snapshot/restore loops wrapped in try/catch for graceful fallback
+
+### 2.1.2
+- Fix: Sub-site-specific plugins (e.g. CPTUI activated on one sub-site only) now correctly restored after collateral deactivation — snapshot now reads active_plugins from every site in the network
+
+### 2.1.1 (superseded by 2.1.2)
+- Fix: Snapshot taken before switch_to_blog(), network-level site transients used, blog context restored before post-update comparison
+
+### 2.1.0
+- Critical fix: network-activated plugins on subdirectory multisite (AIOSEO, Co-Authors Plus, Gravity Forms, Sucuri) no longer deactivated — three compounding bugs fixed: snapshot timing, transient scope, and blog context for post-update comparison
+
+### 2.0.9
+- Critical fix: HTTP 500 on managed hosting (Kinsta) during plugin/theme updates — removed all blocking wp_update_plugins/themes() calls from AJAX context, replaced with background wp-cron event (wpmm_refresh_update_transient)
+
+### 2.0.8
+- Critical fix: network-activated plugins (Site Kit, Sucuri, Clarity) now restored after collateral deactivation — active_sitewide_plugins added to snapshot/restore
+- Feature: email reports group multiple sessions by date with clear headers
+- Fix: Sent Email History updates immediately after send without page refresh
+- Fix: email history AJAX switched from $.post().then() to $.ajax() with explicit success handler
+- Tests: 17-assertion CLI unit test suite added for snapshot/restore logic
+
+### 2.0.7
+- Feature: backup warning modal before any update action
+- Fix: collateral deactivation restore works correctly on retries via session-keyed transient
+
+### 2.0.6
+- Fix: collateral plugin deactivation — active plugins snapshotted before each update and restored after
+
+### 2.0.5
+- Security: cross-site AJAX cap bypass, Akismet site scoping, spam log actions correctly scoped, REST API key stored as wp_hash() digest
+- Fix: All-Sites network email sends in correct order, dashboard date display, log pagination in SQL, false success banner on empty update list
+
+### 2.0.4
+- Feature: email reports accumulate all unsent sessions into one combined report (wpmm_pending_sessions)
+
+### 2.0.3
+- Fix: AIOSEO Pro incorrectly flagged as manual update — scan now refreshes before deciding
+
+### 2.0.2
+- Fix: Divi and premium themes — freshness check, skin error surfacing, auto-retry on stale URL
+
+### 2.0.1
+- Fix: Jetpack copy error now correctly reported; Gravity Forms add-ons show amber "Manual update required" warning
+
+### 2.0.0
+- Premium plugin updates confirmed working end-to-end; AIOSEO Pro auto-retry with fresh signed URL verified
+
+### 1.9.9
+- Diagnostic build for AIOSEO Pro null result investigation
+
 ### 1.9.8
 - Fix: AIOSEO Pro / premium plugins reporting "version unchanged" — auto-retry with fresh signed URL when upgrader returns null
 
