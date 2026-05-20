@@ -1,11 +1,12 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_action( 'wp_ajax_wpmm_run_update',    'wpmm_ajax_run_update' );
-add_action( 'wp_ajax_wpmm_send_email',    'wpmm_ajax_send_email' );
-add_action( 'wp_ajax_wpmm_resend_email',  'wpmm_ajax_resend_email' );
-add_action( 'wp_ajax_wpmm_get_updates',   'wpmm_ajax_get_updates' );
-add_action( 'wp_ajax_wpmm_get_email_body','wpmm_ajax_get_email_body' );
+add_action( 'wp_ajax_wpmm_run_update',       'wpmm_ajax_run_update' );
+add_action( 'wp_ajax_wpmm_send_email',       'wpmm_ajax_send_email' );
+add_action( 'wp_ajax_wpmm_resend_email',     'wpmm_ajax_resend_email' );
+add_action( 'wp_ajax_wpmm_get_updates',      'wpmm_ajax_get_updates' );
+add_action( 'wp_ajax_wpmm_get_email_body',   'wpmm_ajax_get_email_body' );
+add_action( 'wp_ajax_wpmm_batch_complete',   'wpmm_ajax_batch_complete' );
 // wpmm_save_settings is registered in admin/settings.php
 
 // ── Shared capability check ───────────────────────────────────────────────────
@@ -597,6 +598,43 @@ function wpmm_ajax_get_email_body() {
 
 // ── Autocomplete: search item names in the log ────────────────────────────────
 add_action( 'wp_ajax_wpmm_search_items', 'wpmm_ajax_search_items' );
+
+/**
+ * Called by JS when a batch of updates finishes.
+ * Fires the admin notification email if the appropriate setting is enabled.
+ * Receives the session results as a JSON-encoded array.
+ */
+function wpmm_ajax_batch_complete() {
+    wpmm_ajax_cap_check();
+
+    // phpcs:disable WordPress.Security.NonceVerification.Missing -- verified via wpmm_ajax_cap_check()
+    $session_id  = sanitize_text_field( wp_unslash( $_POST['session_id'] ?? '' ) );
+    $admin_id    = absint( $_POST['admin_id'] ?? 0 );
+    $results_raw = sanitize_text_field( wp_unslash( $_POST['results'] ?? '[]' ) );
+    // phpcs:enable
+
+    $results = [];
+    $decoded = json_decode( $results_raw, true );
+    if ( is_array( $decoded ) ) {
+        foreach ( $decoded as $r ) {
+            $results[] = [
+                'slug'        => sanitize_text_field( $r['slug']        ?? '' ),
+                'name'        => sanitize_text_field( $r['name']        ?? '' ),
+                'status'      => sanitize_text_field( $r['status']      ?? '' ),
+                'old_version' => sanitize_text_field( $r['old_version'] ?? '' ),
+                'new_version' => sanitize_text_field( $r['new_version'] ?? '' ),
+                'error_code'  => sanitize_text_field( $r['error_code']  ?? '' ),
+                'message'     => sanitize_text_field( $r['message']     ?? '' ),
+            ];
+        }
+    }
+
+    if ( ! empty( $results ) ) {
+        wpmm_send_admin_notification( $results, $admin_id, $session_id );
+    }
+
+    wp_send_json_success( [ 'notified' => ! empty( $results ) ] );
+}
 
 function wpmm_ajax_search_items() {
     wpmm_ajax_cap_check();

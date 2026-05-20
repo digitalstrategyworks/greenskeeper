@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.1.9  
+**Version:** 2.1.10  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,12 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.1.10
+- Fix: Update Log suppresses failed rows when retry succeeded in same session (most recent row per slug wins)
+- Feature: Three batch completion states (all success/partial/all failed) with retry options
+- Feature: Admin notification emails after batch completion with three independently toggleable types
+- Feature: Email Notifications settings card in Settings
+
 ### 2.1.9
 - Feature: Update Log "Send Report →" button navigates to Email Reports pre-loaded with that session's data
 - Feature: Resend flow — amber notice when a session was previously sent, subject prefixed with [Updated Report], email body includes blue "Updated Report" banner with original send date and time
@@ -954,6 +960,12 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.1.10
+- Fix: Update Log suppresses failed rows when retry succeeded in same session (most recent row per slug wins)
+- Feature: Three batch completion states (all success/partial/all failed) with retry options
+- Feature: Admin notification emails after batch completion with three independently toggleable types
+- Feature: Email Notifications settings card in Settings
 
 ### 2.1.9
 - Feature: Update Log "Send Report →" link pre-loads Email Reports with resend notice, prefixed subject, and updated report banner

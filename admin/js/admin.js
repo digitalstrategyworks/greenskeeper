@@ -462,19 +462,35 @@ jQuery(function ($) {
         );
         $('#wpmm-global-progress').prop('hidden', false);
 
-        // Wrap the done callback to advance the progress bar after each item.
-        var originalItems = items.slice(); // keep a reference to the full list
+        // Track success/fail counts across the batch.
+        var batchSuccessCount = 0;
+        var batchFailCount    = 0;
+        var failedItems       = []; // for retry
 
         function onItemComplete(itemName, success) {
-            completedItems++;
-            var pct = Math.round( (completedItems / totalItems) * 100 );
+            if (success) { batchSuccessCount++; } else {
+                batchFailCount++;
+                // Find the failed item's data for retry.
+                $('.wpmm-item').each(function () {
+                    var $li = $(this);
+                    if ($li.find('.wpmm-item-name, strong').first().text().trim() === itemName) {
+                        failedItems.push({
+                            type: $li.data('type'),
+                            slug: $li.data('slug'),
+                            pkg:  $li.data('package') || '',
+                            $li:  $li,
+                        });
+                    }
+                });
+            }
+            var done = batchSuccessCount + batchFailCount;
+            var total = items.length;
+            var pct = Math.round((done / total) * 100);
             $('#wpmm-progress-fill').css('width', pct + '%');
             var statusWord = success ? 'Updated' : 'Failed';
-            var remaining  = totalItems - completedItems;
-            if (remaining > 0) {
+            if (done < total) {
                 $('#wpmm-progress-label').text(
-                    statusWord + ': ' + itemName +
-                    ' — ' + remaining + ' remaining…'
+                    statusWord + ': ' + itemName + ' (' + done + ' of ' + total + ')'
                 );
             } else {
                 $('#wpmm-progress-label').text(
@@ -484,11 +500,102 @@ jQuery(function ($) {
         }
 
         runUpdatesSequential(items, 0, onItemComplete, function () {
-            // Small pause so the 100% bar is visible before hiding.
             setTimeout(function () {
                 $('#wpmm-global-progress').prop('hidden', true);
-                $('#wpmm-global-success').prop('hidden', false);
+                $('#wpmm-global-success, #wpmm-global-partial, #wpmm-global-allfailed')
+                    .prop('hidden', true);
+
+                if (batchFailCount === 0) {
+                    // ── State A: All succeeded ──────────────────────────────
+                    $('#wpmm-success-msg').text(
+                        'All ' + batchSuccessCount + ' update' +
+                        (batchSuccessCount !== 1 ? 's' : '') + ' completed successfully!'
+                    );
+                    $('#wpmm-global-success').prop('hidden', false);
+
+                } else if (batchSuccessCount === 0) {
+                    // ── State C: All failed ─────────────────────────────────
+                    $('#wpmm-allfailed-msg').text(
+                        'All ' + batchFailCount + ' update' +
+                        (batchFailCount !== 1 ? 's' : '') +
+                        ' failed. Retry or check plugin licenses before sending a report.'
+                    );
+                    $('#wpmm-global-allfailed').prop('hidden', false);
+
+                } else {
+                    // ── State B: Partial success ────────────────────────────
+                    $('#wpmm-partial-msg').html(
+                        '<strong>' + batchSuccessCount + ' of ' + (batchSuccessCount + batchFailCount) +
+                        ' updates completed.</strong> ' + batchFailCount + ' update' +
+                        (batchFailCount !== 1 ? 's' : '') +
+                        ' failed — retry them now, or send the report with successful updates only.'
+                    );
+                    $('#wpmm-global-partial').prop('hidden', false);
+                }
+
+                // Fire batch_complete to trigger admin notification email.
+                // Collect results from the DOM — each item row has its current state.
+                var batchResults = [];
+                $('.wpmm-item').each(function () {
+                    var $li = $(this);
+                    var status = $li.find('.wpmm-btn-success').length ? 'success' : 'failed';
+                    batchResults.push({
+                        slug:        $li.data('slug') || '',
+                        name:        $li.find('strong').first().text().trim(),
+                        status:      status,
+                        old_version: $li.find('.wpmm-item-meta').text().replace(/Updated to version.*/, '').trim(),
+                        new_version: '',
+                        error_code:  '',
+                        message:     '',
+                    });
+                });
+
+                $.post(wpmm.ajax_url, {
+                    action:     'wpmm_batch_complete',
+                    nonce:      wpmm.nonce,
+                    session_id: sessionId,
+                    admin_id:   performingAdminId,
+                    results:    JSON.stringify(batchResults),
+                });
+
             }, 600);
+        });
+
+        // ── Retry failed updates ───────────────────────────────────────────
+        $(document).on('click', '#wpmm-retry-failed-btn, #wpmm-retry-all-btn', function () {
+            $('#wpmm-global-partial, #wpmm-global-allfailed').prop('hidden', true);
+            // Re-run just the failed items.
+            var itemsToRetry = failedItems.slice();
+            failedItems    = [];
+            batchFailCount = 0;
+            runUpdatesSequential(
+                itemsToRetry.map(function (f) {
+                    return { type: f.type, slug: f.slug, pkg: f.pkg };
+                }),
+                0,
+                onItemComplete,
+                function () {
+                    setTimeout(function () {
+                        $('#wpmm-global-progress').prop('hidden', true);
+                        if (batchFailCount === 0) {
+                            $('#wpmm-success-msg').text(
+                                'All ' + batchSuccessCount + ' update' +
+                                (batchSuccessCount !== 1 ? 's' : '') + ' completed successfully!'
+                            );
+                            $('#wpmm-global-success').prop('hidden', false);
+                        } else if (batchSuccessCount === 0) {
+                            $('#wpmm-global-allfailed').prop('hidden', false);
+                        } else {
+                            $('#wpmm-partial-msg').html(
+                                '<strong>' + batchSuccessCount + ' of ' +
+                                (batchSuccessCount + batchFailCount) +
+                                ' updates completed.</strong> ' + batchFailCount + ' still failing.'
+                            );
+                            $('#wpmm-global-partial').prop('hidden', false);
+                        }
+                    }, 600);
+                }
+            );
         });
 
         }); // end requireBackupConfirmation callback
@@ -1855,6 +1962,29 @@ jQuery(function ($) {
         });
     })();
 
+
+    // ── Notification settings save ──────────────────────────────────────────
+    $(document).on('click', '.wpmm-save-notify-settings', function () {
+        var $btn = $(this).prop('disabled', true);
+        var $msg = $('#wpmm-notify-settings-msg');
+        $msg.html('<span style="color:var(--wpmm-gray);">Saving&hellip;</span>');
+        $.post(wpmm.ajax_url, {
+            action:                    'wpmm_save_settings',
+            nonce:                     wpmm.nonce,
+            notify_settings_submitted: 1,
+            notify_all_success:        $('#wpmm-notify-all-success').is(':checked') ? 1 : 0,
+            notify_partial_success:    $('#wpmm-notify-partial-success').is(':checked') ? 1 : 0,
+            notify_all_failed:         $('#wpmm-notify-all-failed').is(':checked') ? 1 : 0,
+        }, function (res) {
+            $btn.prop('disabled', false);
+            if (res.success) {
+                $msg.html('<span style="color:var(--wpmm-green);">&#10003; Saved.</span>');
+                setTimeout(function () { $msg.html(''); }, 3000);
+            } else {
+                $msg.html('<span style="color:var(--wpmm-red);">Save failed.</span>');
+            }
+        });
+    });
 
     // ── Activity Log settings save (Settings page) ─────────────────────────
     // Kept OUTSIDE the activity log IIFE so it works on the Settings page

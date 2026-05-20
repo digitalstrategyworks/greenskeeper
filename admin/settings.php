@@ -140,6 +140,13 @@ function wpmm_ajax_save_settings() {
         $s['activity_log_full_ip'] = $new_full_ip;
     }
 
+    // Notification email settings — sentinel detects unchecked checkboxes.
+    if ( ! empty( $_POST['notify_settings_submitted'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $s['notify_all_success']     = ! empty( $_POST['notify_all_success'] ) ? 1 : 0;     // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $s['notify_partial_success'] = ! empty( $_POST['notify_partial_success'] ) ? 1 : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $s['notify_all_failed']      = ! empty( $_POST['notify_all_failed'] ) ? 1 : 0;      // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    }
+
     wpmm_save_settings( $s );
     wp_send_json_success( $s );
 }
@@ -621,6 +628,76 @@ function wpmm_render_settings() {
                         <span class="dashicons dashicons-saved"></span> Save Activity Settings
                     </button>
                     <span class="wpmm-save-feedback" id="wpmm-activity-settings-msg"></span>
+                </div>
+            </div>
+
+            <!-- ── Email Notifications ───────────────────────────────── -->
+            <div class="wpmm-card" id="wpmm-notify-card">
+                <h2 class="wpmm-card-title">
+                    <span class="dashicons dashicons-bell"></span> Email Notifications
+                </h2>
+                <p class="wpmm-card-desc">
+                    Choose which internal notification emails are sent to the performing
+                    administrator after a batch of updates completes. These are separate
+                    from the client-facing report — they go only to the administrator.
+                </p>
+
+                <div class="wpmm-settings-group">
+                    <div class="wpmm-settings-group-label">
+                        <strong>All updates succeeded</strong>
+                        <span>Notify when every update in a batch completes successfully.</span>
+                    </div>
+                    <div class="wpmm-settings-group-control">
+                        <label class="wpmm-toggle">
+                            <input type="checkbox" id="wpmm-notify-all-success"
+                                   value="1" <?php checked( ! empty( $s['notify_all_success'] ) ); ?>>
+                            <span class="wpmm-toggle-slider"></span>
+                        </label>
+                        <span class="wpmm-hint" style="margin-left:12px;">
+                            Off by default — clean batches are routine. Enable if you want a confirmation for every run.
+                        </span>
+                    </div>
+                </div>
+
+                <div class="wpmm-settings-group">
+                    <div class="wpmm-settings-group-label">
+                        <strong>Some updates failed</strong>
+                        <span>Notify when a batch completes with a mix of successes and failures.</span>
+                    </div>
+                    <div class="wpmm-settings-group-control">
+                        <label class="wpmm-toggle">
+                            <input type="checkbox" id="wpmm-notify-partial-success"
+                                   value="1" <?php checked( ! empty( $s['notify_partial_success'] ) ); ?>>
+                            <span class="wpmm-toggle-slider"></span>
+                        </label>
+                        <span class="wpmm-hint" style="margin-left:12px;">
+                            On by default — partial failures need attention.
+                        </span>
+                    </div>
+                </div>
+
+                <div class="wpmm-settings-group">
+                    <div class="wpmm-settings-group-label">
+                        <strong>All updates failed</strong>
+                        <span>Notify when every update in a batch fails.</span>
+                    </div>
+                    <div class="wpmm-settings-group-control">
+                        <label class="wpmm-toggle">
+                            <input type="checkbox" id="wpmm-notify-all-failed"
+                                   value="1" <?php checked( ! empty( $s['notify_all_failed'] ) ); ?>>
+                            <span class="wpmm-toggle-slider"></span>
+                        </label>
+                        <span class="wpmm-hint" style="margin-left:12px;">
+                            On by default — complete failures require immediate action.
+                        </span>
+                    </div>
+                </div>
+
+                <div style="margin-top:16px;">
+                    <button type="button" class="wpmm-btn wpmm-btn-primary wpmm-save-notify-settings">
+                        <span class="dashicons dashicons-saved"></span> Save Notification Settings
+                    </button>
+                    <span class="wpmm-save-feedback" id="wpmm-notify-settings-msg"></span>
                 </div>
             </div>
 

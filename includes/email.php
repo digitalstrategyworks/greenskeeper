@@ -44,9 +44,6 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
 
     // ── Group entries by session so multiple update runs appear as separate
     //    date-labelled sections rather than one undifferentiated block.
-    //    This handles the case where plugins were updated Monday and themes
-    //    updated Wednesday — both batches show in a single email clearly
-    //    labelled with their respective dates and times.
     $sessions_ordered = []; // [ session_key => [ 'date' => ..., 'entries' => [...] ] ]
 
     if ( is_array( $log_entries ) ) {
@@ -56,7 +53,6 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
                 : 'legacy-' . substr( $entry->updated_at ?? '', 0, 10 );
 
             if ( ! isset( $sessions_ordered[ $session_key ] ) ) {
-                // Use the first entry's timestamp as the session date label.
                 $sessions_ordered[ $session_key ] = [
                     'date'    => $entry->updated_at ?? '',
                     'entries' => [],
@@ -65,6 +61,41 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
             $sessions_ordered[ $session_key ]['entries'][] = $entry;
         }
     }
+
+    // ── De-duplicate within each session: most recent row per slug wins ───────
+    // Rule: if a plugin was retried and the retry succeeded, suppress the
+    // earlier failed row — only the successful outcome is shown.
+    // The failed row remains in the database for audit purposes; this is
+    // purely a presentational de-duplication at email-build time.
+    foreach ( $sessions_ordered as $key => &$session ) {
+        $seen = []; // slug => index of most recent row in entries array
+        foreach ( $session['entries'] as $idx => $entry ) {
+            $slug = $entry->item_slug ?? ( $entry->item_name ?? '' );
+            if ( isset( $seen[ $slug ] ) ) {
+                $prev_idx    = $seen[ $slug ];
+                $prev_status = $session['entries'][ $prev_idx ]->status ?? '';
+                $curr_status = $entry->status ?? '';
+                // If the current row is a success and the previous was a failure,
+                // remove the failed row — keep the success.
+                if ( $curr_status === 'success' && $prev_status !== 'success' ) {
+                    unset( $session['entries'][ $prev_idx ] );
+                    $seen[ $slug ] = $idx;
+                } elseif ( $curr_status !== 'success' && $prev_status === 'success' ) {
+                    // Previous was success, current is failure — keep success, discard current.
+                    unset( $session['entries'][ $idx ] );
+                } else {
+                    // Both same status — keep most recent (current).
+                    unset( $session['entries'][ $prev_idx ] );
+                    $seen[ $slug ] = $idx;
+                }
+            } else {
+                $seen[ $slug ] = $idx;
+            }
+        }
+        // Re-index after potential unsets.
+        $session['entries'] = array_values( $session['entries'] );
+    }
+    unset( $session ); // break reference
 
     // Determine whether to show session date headers — only when more than
     // one distinct session is present in this email.
@@ -725,4 +756,153 @@ function wpmm_build_network_email_body( $sites_data, $admin_id = 0, $update_note
     </div>
   </div>
 </body></html>';
+}
+
+/**
+ * Send an internal admin notification email after a batch completes.
+ *
+ * This is a separate internal email — NOT the client-facing report.
+ * It goes to the performing administrator to inform them of the outcome.
+ *
+ * @param array  $results    Array of update result arrays from wpmm_do_update().
+ * @param int    $admin_id   Performing administrator user ID.
+ * @param string $session_id Session identifier for the batch.
+ */
+function wpmm_send_admin_notification( array $results, $admin_id = 0, $session_id = '' ) {
+    if ( empty( $results ) ) {
+        return;
+    }
+
+    $s = wpmm_get_settings();
+
+    // Determine which notification types are enabled.
+    $notify_all_success     = ! empty( $s['notify_all_success'] );
+    $notify_partial_success = ! empty( $s['notify_partial_success'] );
+    $notify_all_failed      = ! empty( $s['notify_all_failed'] );
+
+    // Tally results.
+    $successes = array_filter( $results, function( $r ) { return ( $r['status'] ?? '' ) === 'success'; } );
+    $failures  = array_filter( $results, function( $r ) { return ( $r['status'] ?? '' ) !== 'success'; } );
+
+    $all_succeeded  = count( $failures ) === 0;
+    $all_failed     = count( $successes ) === 0;
+    $partial        = ! $all_succeeded && ! $all_failed;
+
+    // Check whether this notification type is enabled.
+    if ( $all_succeeded && ! $notify_all_success )     { return; }
+    if ( $partial       && ! $notify_partial_success ) { return; }
+    if ( $all_failed    && ! $notify_all_failed )      { return; }
+
+    // Resolve recipient — performing admin, then default admin, then admin_email.
+    $recipient = null;
+    if ( $admin_id ) {
+        $recipient = get_user_by( 'id', $admin_id );
+    }
+    if ( ! $recipient ) {
+        $recipient = wpmm_get_default_admin();
+    }
+    $to = $recipient ? $recipient->user_email : get_option( 'admin_email' );
+    if ( ! $to ) {
+        return;
+    }
+
+    $site_name = get_bloginfo( 'name' );
+    $site_url  = get_bloginfo( 'url' );
+
+    // Subject line reflects outcome.
+    if ( $all_succeeded ) {
+        $subject = '[Greenskeeper] ✓ All updates completed — ' . $site_name;
+    } elseif ( $all_failed ) {
+        $subject = '[Greenskeeper] ✗ All updates failed — ' . $site_name;
+    } else {
+        $subject = '[Greenskeeper] ⚠ ' . count( $failures ) . ' update(s) need attention — ' . $site_name;
+    }
+
+    // Build email body.
+    $rows_success = '';
+    foreach ( $successes as $r ) {
+        $rows_success .= '<tr>'
+            . '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">'
+            . esc_html( $r['name'] ?? $r['slug'] ?? '' )
+            . '</td>'
+            . '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:12px;">'
+            . esc_html( $r['old_version'] ?? '' ) . ' &rarr; ' . esc_html( $r['new_version'] ?? '' )
+            . '</td>'
+            . '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">'
+            . '<span style="color:#16a34a;font-weight:700;">&#10003; Updated</span>'
+            . '</td>'
+            . '</tr>';
+    }
+
+    $rows_failed = '';
+    foreach ( $failures as $r ) {
+        $error_code = $r['error_code'] ?? '';
+        $reason     = $error_code === 'no_package' || $error_code === 'wpmm_requires_manual'
+            ? 'License required — update manually'
+            : ( $r['message'] ?? 'Update failed' );
+        // Strip DEBUG strings from internal notification too.
+        $reason = preg_replace( '/\s*DEBUG:.*$/s', '', $reason );
+        $rows_failed .= '<tr style="background:#fffbeb;">'
+            . '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">'
+            . esc_html( $r['name'] ?? $r['slug'] ?? '' )
+            . '</td>'
+            . '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:12px;">'
+            . esc_html( $r['old_version'] ?? '' )
+            . '</td>'
+            . '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">'
+            . '<span style="color:#92400e;font-weight:700;">&#9888; ' . esc_html( $reason ) . '</span>'
+            . '</td>'
+            . '</tr>';
+    }
+
+    $success_section = '';
+    if ( $rows_success ) {
+        $success_section = '<h3 style="color:#166534;font-size:14px;margin:20px 0 8px;">&#10003; Completed Successfully</h3>'
+            . '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+            . '<thead><tr>'
+            . '<th style="text-align:left;padding:8px 12px;background:#f0fdf4;border-bottom:2px solid #bbf7d0;">Plugin / Theme</th>'
+            . '<th style="text-align:left;padding:8px 12px;background:#f0fdf4;border-bottom:2px solid #bbf7d0;">Version</th>'
+            . '<th style="text-align:left;padding:8px 12px;background:#f0fdf4;border-bottom:2px solid #bbf7d0;">Status</th>'
+            . '</tr></thead><tbody>' . $rows_success . '</tbody></table>';
+    }
+
+    $failed_section = '';
+    if ( $rows_failed ) {
+        $failed_section = '<h3 style="color:#92400e;font-size:14px;margin:20px 0 8px;">&#9888; Needs Attention</h3>'
+            . '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+            . '<thead><tr>'
+            . '<th style="text-align:left;padding:8px 12px;background:#fffbeb;border-bottom:2px solid #fde68a;">Plugin / Theme</th>'
+            . '<th style="text-align:left;padding:8px 12px;background:#fffbeb;border-bottom:2px solid #fde68a;">Current Version</th>'
+            . '<th style="text-align:left;padding:8px 12px;background:#fffbeb;border-bottom:2px solid #fde68a;">Reason</th>'
+            . '</tr></thead><tbody>' . $rows_failed . '</tbody></table>';
+    }
+
+    $log_url   = admin_url( 'admin.php?page=wpmm-update-log' );
+    $email_url = admin_url( 'admin.php?page=wpmm-email-reports' );
+    $timestamp = date_i18n( 'F j, Y \a\t g:i A' );
+
+    $body = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
+        . '<body style="font-family:Arial,sans-serif;background:#f1f5f9;margin:0;padding:20px;">'
+        . '<div style="max-width:640px;margin:0 auto;background:#fff;border-radius:8px;'
+        .   'overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1);">'
+        . '<div style="background:#1e3a5f;padding:20px 28px;">'
+        . '<p style="color:#fff;margin:0;font-size:18px;font-weight:bold;">&#9971; Greenskeeper</p>'
+        . '<p style="color:#94a3b8;margin:4px 0 0;font-size:13px;">Update notification for ' . esc_html( $site_name ) . '</p>'
+        . '</div>'
+        . '<div style="padding:24px 28px;">'
+        . '<p style="color:#6b7280;font-size:13px;margin:0 0 16px;">Batch completed on <strong>' . esc_html( $timestamp ) . '</strong>.</p>'
+        . $success_section
+        . $failed_section
+        . '<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;">'
+        . '<a href="' . esc_url( $log_url ) . '" style="margin-right:16px;color:#1e3a5f;font-size:13px;">View Update Log &rarr;</a>'
+        . ( $rows_success ? '<a href="' . esc_url( $email_url ) . '" style="color:#1e3a5f;font-size:13px;">Send Client Report &rarr;</a>' : '' )
+        . '</div>'
+        . '</div></div></body></html>';
+
+    $headers = [
+        'Content-Type: text/html; charset=UTF-8',
+        'From: Greenskeeper <' . get_option( 'admin_email' ) . '>',
+    ];
+
+    wp_mail( $to, $subject, $body, $headers );
 }

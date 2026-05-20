@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.1.9
+Stable tag:        2.1.10
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -154,6 +154,33 @@ the integration; you are responsible for holding a valid Akismet licence
 appropriate for your site's use.
 
 == Frequently Asked Questions ==
+
+= Does Greenskeeper send notifications to the administrator after updates? =
+Yes — from v2.1.10 onward, Greenskeeper can send an internal notification
+email to the performing administrator when a batch of updates completes.
+Three notification types are available, each independently toggleable in
+Greenskeeper → Settings → Email Notifications: (1) All updates succeeded
+(off by default — routine clean batches don't need an email), (2) Some
+updates failed (on by default — partial failures need attention), (3) All
+updates failed (on by default — complete failures require immediate action).
+These notifications go only to the administrator, not to the client.
+
+= What happens when some updates fail and others succeed? =
+The Updates page now shows one of three distinct states after a batch
+completes: (A) All succeeded — green confirmation with a Send Report link;
+(B) Partial success — amber warning showing how many succeeded and how many
+failed, with options to retry the failed updates or send a report with only
+the successful ones; (C) All failed — red warning with a Retry All option.
+The Send Report link is never shown when all updates failed since there is
+nothing to report.
+
+= If I retry a failed update and it succeeds, does the failure still appear? =
+No. If a plugin update fails and you retry it in the same session and the
+retry succeeds, the failed row is suppressed from both the Update Log display
+and the email report. Only the successful outcome is shown. The failed row
+remains in the database for audit purposes but is hidden from the user-facing
+views. This applies to both individual retries and batch retries.
+
 
 = Does Greenskeeper log site activity and user logins? =
 Yes — Greenskeeper includes a Site Activity Log that records user logins,
@@ -659,6 +686,29 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.1.10 =
+* Fix: Update Log now suppresses failed rows when a retry in the same
+  session succeeded. The failed row remains in the database for audit
+  purposes but is hidden from the Update Log display and excluded from
+  email reports. Rule: most recent row per plugin slug wins within a
+  session. Applied to both the Update Log page renderer and the email
+  body builder.
+* Feature: Three batch completion states on the Updates page. Previously
+  a single green banner appeared after every batch regardless of outcome.
+  Now: (A) all succeeded — green banner with Send Report link; (B) partial
+  success — amber warning with Retry Failed and Send Partial Report options;
+  (C) all failed — red warning with Retry All option. Send Report is never
+  shown when all updates failed.
+* Feature: Admin notification emails — Greenskeeper can now send an
+  internal notification email to the performing administrator when a batch
+  completes. Three notification types, each independently toggleable in
+  Settings: all updates succeeded (off by default), some updates failed
+  (on by default), all updates failed (on by default). The notification
+  email is separate from the client-facing report and includes a summary
+  of successes and failures with links to the Update Log and Email Reports.
+* Feature: Email Notifications settings card in Settings — toggle each
+  admin notification type on or off independently.
 
 = 2.1.9 =
 * Feature: Resend from Update Log — each session in the Update Log now

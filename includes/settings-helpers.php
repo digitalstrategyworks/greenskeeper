@@ -18,6 +18,10 @@ function wpmm_get_settings() {
         'activity_log_enabled'        => 0,
         'activity_log_full_ip'        => 0,  // 0 = anonymise (GDPR default)
         'activity_log_retention_days' => 90,
+        // Admin notification email defaults.
+        'notify_all_success'          => 0,  // off by default — low noise
+        'notify_partial_success'      => 1,  // on — actionable
+        'notify_all_failed'           => 1,  // on — critical
     ];
     // Allow other modules (e.g. spam-filter.php) to register their own defaults.
     $defaults = apply_filters( 'wpmm_settings_defaults', $defaults );

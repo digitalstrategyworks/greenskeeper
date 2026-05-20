@@ -1092,13 +1092,43 @@ function wpmm_render_updates() {
                 </div>
             </div>
 
-            <!-- Success banner — shown only after a batch completes with updates present -->
+            <!-- Batch completion banners — shown after a batch finishes.
+                 Three states: all success (green), partial (amber), all failed (red).
+                 JS populates the content and shows the correct one. -->
             <div id="wpmm-global-success" class="wpmm-notice wpmm-notice-success" hidden>
                 <span class="dashicons dashicons-yes-alt"></span>
-                All selected items were updated successfully!
-                <a href="<?php echo esc_url( wpmm_subpage_url( WPMM_SLUG_EMAIL ) ); ?>" style="margin-left:12px;">
+                <span id="wpmm-success-msg">All selected items were updated successfully!</span>
+                <a href="<?php echo esc_url( wpmm_subpage_url( WPMM_SLUG_EMAIL ) ); ?>"
+                   id="wpmm-send-report-link" style="margin-left:12px;">
                     Send Report Email &rarr;
                 </a>
+            </div>
+            <div id="wpmm-global-partial" class="wpmm-notice" hidden
+                 style="background:#fffbeb;border-left:4px solid #f59e0b;color:#92400e;">
+                <span class="dashicons dashicons-warning" style="color:#f59e0b;"></span>
+                <span id="wpmm-partial-msg"></span>
+                <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+                    <button type="button" id="wpmm-retry-failed-btn"
+                            class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm">
+                        <span class="dashicons dashicons-update"></span> Retry Failed Updates
+                    </button>
+                    <a href="<?php echo esc_url( wpmm_subpage_url( WPMM_SLUG_EMAIL ) ); ?>"
+                       id="wpmm-send-partial-link"
+                       class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm"
+                       style="text-decoration:none;">
+                        Send Report with Successful Updates Only &rarr;
+                    </a>
+                </div>
+            </div>
+            <div id="wpmm-global-allfailed" class="wpmm-notice wpmm-notice-error" hidden>
+                <span class="dashicons dashicons-dismiss"></span>
+                <span id="wpmm-allfailed-msg">All updates failed. No report will be sent until at least one update succeeds.</span>
+                <div style="margin-top:10px;">
+                    <button type="button" id="wpmm-retry-all-btn"
+                            class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm">
+                        <span class="dashicons dashicons-update"></span> Retry All
+                    </button>
+                </div>
             </div>
 
             <?php wpmm_tip_card(); ?>
@@ -1316,7 +1346,37 @@ function wpmm_render_log() {
                 <!-- Session accordion -->
                 <div class="wpmm-session-list">
                 <?php foreach ( $page_keys as $i => $key ) :
-                    $items         = $session_items[ $key ];
+                    $items_raw     = $session_items[ $key ];
+
+                    // ── De-duplicate within session: most recent row per slug wins ──
+                    // If a plugin was retried and the retry succeeded, suppress the
+                    // earlier failed row. The row stays in the DB for audit purposes
+                    // but is hidden from the Update Log display.
+                    $seen_slugs = [];
+                    $items      = [];
+                    foreach ( $items_raw as $r ) {
+                        $slug = $r->item_slug ?? $r->item_name ?? '';
+                        if ( isset( $seen_slugs[ $slug ] ) ) {
+                            $prev_idx    = $seen_slugs[ $slug ];
+                            $prev_status = $items[ $prev_idx ]->status ?? '';
+                            $curr_status = $r->status ?? '';
+                            if ( $curr_status === 'success' && $prev_status !== 'success' ) {
+                                // Retry succeeded — replace failed row with success.
+                                $items[ $prev_idx ]  = $r;
+                                $seen_slugs[ $slug ] = $prev_idx;
+                            } elseif ( $curr_status !== 'success' && $prev_status === 'success' ) {
+                                // Previous success — keep it, discard current failure.
+                            } else {
+                                // Both same status — keep most recent.
+                                $items[ $prev_idx ]  = $r;
+                                $seen_slugs[ $slug ] = $prev_idx;
+                            }
+                        } else {
+                            $seen_slugs[ $slug ] = count( $items );
+                            $items[]             = $r;
+                        }
+                    }
+
                     $is_legacy     = ( strpos( $key, 'legacy-' ) === 0 );
                     $first         = $items[0];
                     $acc_id        = 'wpmm-acc-' . sanitize_key( $key );
