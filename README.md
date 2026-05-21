@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.1.10  
+**Version:** 2.1.10.1  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,10 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.1.10.1
+- Fix: WordPress core updates through Greenskeeper not appearing in email report — hidden session field now reads from pending sessions (survives core update page reload)
+- Fix: WordPress core updates made outside Greenskeeper now captured in Update Log
+
 ### 2.1.10
 - Fix: Update Log suppresses failed rows when retry succeeded in same session (most recent row per slug wins)
 - Feature: Three batch completion states (all success/partial/all failed) with retry options
@@ -960,6 +964,10 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.1.10.1
+- Fix: WordPress core updates through Greenskeeper not appearing in email report — hidden session field now reads from pending sessions (survives core update page reload)
+- Fix: WordPress core updates made outside Greenskeeper now captured in Update Log
 
 ### 2.1.10
 - Fix: Update Log suppresses failed rows when retry succeeded in same session (most recent row per slug wins)

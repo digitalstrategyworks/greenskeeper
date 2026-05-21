@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.1.10
+Stable tag:        2.1.10.1
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -687,6 +687,20 @@ For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
 
+= 2.1.10.1 =
+* Fix: WordPress core updates run through Greenskeeper were not appearing
+  in the email report. Root cause: after a successful core update WordPress
+  forces a page reload which resets the JS sessionId variable. The Email
+  Reports page hidden session field was populated from wpmm_last_session
+  at PHP render time, but since the page was not reloaded after the core
+  update the field still referenced the previous session. Fixed by
+  populating the hidden field from the most recent wpmm_pending_sessions
+  entry instead of wpmm_last_session — pending sessions is updated
+  server-side and survives the page reload correctly.
+* Fix: WordPress core updates made outside Greenskeeper (via the standard
+  WordPress Updates screen) are now captured in the Update Log. The
+  external update catcher previously excluded core updates explicitly.
+
 = 2.1.10 =
 * Fix: Update Log now suppresses failed rows when a retry in the same
   session succeeded. The failed row remains in the database for audit
@@ -709,6 +723,12 @@ For licensing enquiries contact: tony@digitalstrategyworks.com
   of successes and failures with links to the Update Log and Email Reports.
 * Feature: Email Notifications settings card in Settings — toggle each
   admin notification type on or off independently.
+* Fix: WordPress core updates made outside Greenskeeper (via the standard
+  WordPress Updates screen) are now captured in the Update Log and included
+  in the next email report. Previously the external update catcher
+  explicitly excluded core updates. The new version is read from the global
+  $wp_version (already updated at hook time); the old version from the
+  update_core transient's version_checked property.
 
 = 2.1.9 =
 * Feature: Resend from Update Log — each session in the Update Log now

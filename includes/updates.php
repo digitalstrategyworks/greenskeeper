@@ -852,15 +852,50 @@ function wpmm_catch_external_updates( $upgrader, $hook_extra ) {
         return;
     }
 
-    // Only handle plugin and theme updates — not core (handled separately).
-    $type = $hook_extra['type'] ?? '';
-    if ( ! in_array( $type, [ 'plugin', 'theme' ], true ) ) {
+    $type   = $hook_extra['type']   ?? '';
+    $action = $hook_extra['action'] ?? '';
+
+    if ( $action !== 'update' ) {
         return;
     }
 
-    // Collect the items that were updated.
-    $action = $hook_extra['action'] ?? '';
-    if ( $action !== 'update' ) {
+    // ── WordPress core updates ────────────────────────────────────────────────
+    // Core updates have type='core' with no slug. We detect the new version
+    // from the global $wp_version (already updated at this point in the hook).
+    if ( $type === 'core' ) {
+        global $wp_version;
+
+        // Determine the old version — stored before the update by WordPress
+        // in the update_core transient's 'current' property, or fall back
+        // to the current version if we can't find it.
+        $update_core = get_site_transient( 'update_core' );
+        $old_version = isset( $update_core->version_checked )
+            ? $update_core->version_checked
+            : $wp_version;
+
+        $session_id = 'ext-core-' . gmdate( 'YmdHis' );
+        global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+        $wpdb->insert(
+            esc_sql( $wpdb->prefix . 'wpmm_update_log' ),
+            [
+                'session_id'  => $session_id,
+                'item_name'   => 'WordPress',
+                'item_type'   => 'core',
+                'item_slug'   => 'wordpress-core',
+                'old_version' => $old_version,
+                'new_version' => $wp_version,
+                'status'      => 'success',
+                'error_code'  => '',
+                'message'     => '',
+                'updated_at'  => current_time( 'mysql' ),
+            ]
+        );
+        return;
+    }
+
+    // Only handle plugin and theme updates below.
+    if ( ! in_array( $type, [ 'plugin', 'theme' ], true ) ) {
         return;
     }
 

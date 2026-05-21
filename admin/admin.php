@@ -1789,11 +1789,26 @@ function wpmm_render_email() {
                         <?php endif; ?>
                     </div>
                 </div>
-                <!-- Hidden: passes the last persisted session to the AJAX handler.
-                     JS will override this with the in-page sessionId when updates
-                     were run in the same browser session. -->
+                <!-- Hidden: passes the session to the AJAX send handler.
+                     Uses the most recent pending session so that core updates
+                     (which cause a page reload, resetting the JS sessionId var)
+                     are always included. JS overrides this with the in-page
+                     sessionId when updates were run in the current page load. -->
+                <?php
+                // Determine the best session_id to pre-populate.
+                // Priority: URL param (resend flow) → most recent pending session
+                // → wpmm_last_session (backward compat).
+                $prefill_session = $url_session_id;
+                if ( ! $prefill_session && ! empty( $pending ) ) {
+                    $last_p          = end( $pending );
+                    $prefill_session = $last_p['session_id'] ?? '';
+                }
+                if ( ! $prefill_session ) {
+                    $prefill_session = $ls['session_id'] ?? '';
+                }
+                ?>
                 <input type="hidden" id="wpmm-last-session-id"
-                    value="<?php echo esc_attr( $url_session_id ?: ( isset( $ls['session_id'] ) ? $ls['session_id'] : '' ) ); ?>">
+                    value="<?php echo esc_attr( $prefill_session ); ?>">
                 <input type="hidden" id="wpmm-is-resend"
                     value="<?php echo $prior_send ? '1' : '0'; ?>">
                 <input type="hidden" id="wpmm-prior-sent-at"
