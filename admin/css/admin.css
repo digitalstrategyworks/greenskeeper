@@ -358,6 +358,8 @@
     font-weight: 600;
     margin-top: 16px;
 }
+/* Ensure the HTML hidden attribute wins over display:flex */
+.wpmm-notice[hidden] { display: none !important; }
 .wpmm-notice .dashicons { font-size: 20px; width: 20px; height: 20px; }
 .wpmm-notice-success { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
 .wpmm-notice-error   { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
