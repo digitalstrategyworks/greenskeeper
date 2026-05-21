@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.1.10.1
+Stable tag:        2.1.10.2
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -686,6 +686,14 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.1.10.2 =
+* Fix: All three batch completion banners (green/amber/red) were visible
+  simultaneously on the Updates page after a batch completed. The CSS
+  display:flex rule on .wpmm-notice was overriding the HTML hidden
+  attribute, causing all three banners to render visible regardless of
+  the batch outcome. Fixed by adding .wpmm-notice[hidden] { display:
+  none !important } to admin.css so the hidden attribute always wins.
 
 = 2.1.10.1 =
 * Fix: WordPress core updates run through Greenskeeper were not appearing
