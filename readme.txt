@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.1.10.2
+Stable tag:        2.1.10.3
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -686,6 +686,14 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.1.10.3 =
+* Fix: Plugin and theme names were blank in the admin notification email,
+  and version numbers appeared in the Plugin/Theme column instead of names.
+  Root cause: batch results were collected by scraping the DOM after updates
+  completed, which read the wrong elements. Fixed by collecting result data
+  directly from each AJAX response as updates complete and passing it through
+  the callback chain — no DOM scraping involved.
 
 = 2.1.10.2 =
 * Fix: All three batch completion banners (green/amber/red) were visible

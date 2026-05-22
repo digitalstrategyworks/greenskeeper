@@ -466,21 +466,37 @@ jQuery(function ($) {
         var batchSuccessCount = 0;
         var batchFailCount    = 0;
         var failedItems       = []; // for retry
+        var batchResults      = []; // collected from AJAX responses, not DOM
 
-        function onItemComplete(itemName, success) {
+        function onItemComplete(itemName, success, resultData) {
             if (success) { batchSuccessCount++; } else {
                 batchFailCount++;
-                // Find the failed item's data for retry.
-                $('.wpmm-item').each(function () {
-                    var $li = $(this);
-                    if ($li.find('.wpmm-item-name, strong').first().text().trim() === itemName) {
-                        failedItems.push({
-                            type: $li.data('type'),
-                            slug: $li.data('slug'),
-                            pkg:  $li.data('package') || '',
-                            $li:  $li,
-                        });
-                    }
+                var $li = $('.wpmm-item[data-slug="' + (resultData && resultData.slug ? resultData.slug : '') + '"]');
+                if (!$li.length) {
+                    // Fallback — find by name match.
+                    $('.wpmm-item').each(function () {
+                        if ($(this).find('.wpmm-item-name').text().trim() === itemName) {
+                            $li = $(this);
+                        }
+                    });
+                }
+                failedItems.push({
+                    type: $li.data('type') || '',
+                    slug: $li.data('slug') || '',
+                    pkg:  $li.data('package') || '',
+                    $li:  $li,
+                });
+            }
+            // Collect clean result data from the AJAX response — not DOM scraping.
+            if (resultData) {
+                batchResults.push({
+                    slug:        resultData.slug        || '',
+                    name:        resultData.name        || itemName,
+                    status:      resultData.status      || (success ? 'success' : 'failed'),
+                    old_version: resultData.old_version || '',
+                    new_version: resultData.new_version || '',
+                    error_code:  resultData.error_code  || '',
+                    message:     resultData.message     || '',
                 });
             }
             var done = batchSuccessCount + batchFailCount;
@@ -534,22 +550,7 @@ jQuery(function ($) {
                 }
 
                 // Fire batch_complete to trigger admin notification email.
-                // Collect results from the DOM — each item row has its current state.
-                var batchResults = [];
-                $('.wpmm-item').each(function () {
-                    var $li = $(this);
-                    var status = $li.find('.wpmm-btn-success').length ? 'success' : 'failed';
-                    batchResults.push({
-                        slug:        $li.data('slug') || '',
-                        name:        $li.find('strong').first().text().trim(),
-                        status:      status,
-                        old_version: $li.find('.wpmm-item-meta').text().replace(/Updated to version.*/, '').trim(),
-                        new_version: '',
-                        error_code:  '',
-                        message:     '',
-                    });
-                });
-
+                // batchResults was collected from AJAX responses during the batch.
                 $.post(wpmm.ajax_url, {
                     action:     'wpmm_batch_complete',
                     nonce:      wpmm.nonce,
@@ -634,10 +635,8 @@ jQuery(function ($) {
             return $(this).attr('data-slug') === item.slug;
         });
         var $btn = $li.find('.wpmm-update-one-btn');
-        runSingleUpdate(item.type, item.slug, item.pkg, $li, $btn, function (itemName, success) {
-            if (onProgress) { onProgress(itemName, success); }
-            // 800ms breathing room between updates — gives the server time to
-            // fully complete the previous update before the next request lands.
+        runSingleUpdate(item.type, item.slug, item.pkg, $li, $btn, function (itemName, success, resultData) {
+            if (onProgress) { onProgress(itemName, success, resultData); }
             setTimeout(function () {
                 runUpdatesSequential(items, index + 1, onProgress, done);
             }, 800);
@@ -717,7 +716,7 @@ jQuery(function ($) {
                         '<div class="wpmm-status-failed-reason">' + escHtml(msg) + '</div>'
                     );
                 }
-                callback(itemName, success);
+                callback(itemName, success, res.data || {});
             },
             error: function (xhr, status) {
                 $btn.prop('disabled', false).html('Retry');
@@ -727,7 +726,7 @@ jQuery(function ($) {
                 $status.html(
                     '<span class="wpmm-status-failed">&#10060; ' + escHtml(msg) + '</span>'
                 );
-                callback(slug, false);
+                callback(slug, false, { slug: slug, name: slug, status: 'failed', old_version: '', new_version: '', error_code: 'http_error', message: msg });
             }
         });
     }
