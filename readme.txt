@@ -4,9 +4,9 @@ Author:            Tony Zeoli
 Author URI:        https://digitalstrategyworks.com
 Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
-Tested up to:      6.9
+Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.1.10.3
+Stable tag:        2.1.11
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -154,6 +154,16 @@ the integration; you are responsible for holding a valid Akismet licence
 appropriate for your site's use.
 
 == Frequently Asked Questions ==
+
+= Does Greenskeeper include a System Info report? =
+Yes — from v2.1.11 onward, Greenskeeper includes a System Info page
+(Greenskeeper → System Info in the WordPress admin sidebar). It displays
+your full server environment (PHP version, extensions, server software),
+WordPress environment (version, URLs, memory limit, debug mode, database),
+active theme, and a complete list of active plugins with versions and authors.
+A sticky copy-and-paste panel lets you copy the full report as plain text
+to include in support tickets to plugin or theme developers.
+
 
 = Does Greenskeeper send notifications to the administrator after updates? =
 Yes — from v2.1.10 onward, Greenskeeper can send an internal notification
@@ -687,13 +697,33 @@ For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
 
+= 2.1.11 =
+* Feature: System Info page — a new dedicated admin page (Greenskeeper →
+  System Info) that displays a full report of the server and WordPress
+  environment for use when submitting support tickets. Includes:
+  Server Environment (OS, software, PHP version with compatibility
+  indicators, PHP max input vars, PHP max post size, GD/Zip/cURL/mbstring
+  extension status); WordPress Environment (version, site/home URLs,
+  multisite, max upload size, memory limit, permalink structure, language,
+  timezone, admin email, debug mode, database version, table prefix);
+  Active Theme (name, version, author, URI, child theme indicator);
+  Active Plugins (name, version, author — all active plugins including
+  network-activated on multisite, sorted alphabetically). A sticky
+  copy-and-paste sidebar lets you copy the full system report as plain
+  text to include in support tickets to plugin developers.
+* Compatibility: Tested and confirmed compatible with WordPress 7.0.
+  Tested up to value updated to 7.0. Requires at least and Requires PHP
+  added to the plugin file header (previously only in readme.txt).
+
 = 2.1.10.3 =
-* Fix: Plugin and theme names were blank in the admin notification email,
-  and version numbers appeared in the Plugin/Theme column instead of names.
-  Root cause: batch results were collected by scraping the DOM after updates
-  completed, which read the wrong elements. Fixed by collecting result data
-  directly from each AJAX response as updates complete and passing it through
-  the callback chain — no DOM scraping involved.
+* Fix: Plugin/theme names were blank in the admin notification email.
+  Batch results are now collected directly from AJAX responses as each
+  update completes, not from DOM scraping after the fact.
+* Compatibility: Tested and confirmed compatible with WordPress 7.0.
+  Tested up to value updated. Requires at least PHP 8.0 (above the new
+  WordPress 7.0 minimum of PHP 7.4). No code changes required for the
+  iframed editor (Greenskeeper has no block editor integration), the
+  AI Client API, Connections API, or Abilities API.
 
 = 2.1.10.2 =
 * Fix: All three batch completion banners (green/amber/red) were visible

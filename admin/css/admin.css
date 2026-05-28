@@ -1694,3 +1694,18 @@
 .wpmm-scope-bar strong {
     color: var(--wpmm-dark);
 }
+
+/* ── System Info ─────────────────────────────────────────────────────────── */
+.wpmm-sysinfo-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.wpmm-sysinfo-table thead th {
+    background: var(--wpmm-bg);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--wpmm-gray);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}

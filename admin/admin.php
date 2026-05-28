@@ -16,7 +16,8 @@ define( 'WPMM_SLUG_LOG',        'wpmm-update-log' );
 define( 'WPMM_SLUG_EMAIL',      'wpmm-email-reports' );
 define( 'WPMM_SLUG_ACTIVITY',   'wpmm-activity-log' );
 define( 'WPMM_SLUG_SETTINGS',   'wpmm-settings' );
-define( 'WPMM_SLUG_SPAM',        'wpmm-spam-log' );
+define( 'WPMM_SLUG_SPAM',       'wpmm-spam-log' );
+define( 'WPMM_SLUG_SYSINFO',    'wpmm-system-info' );
 
 // =========================================================================
 // Menu registration helpers
@@ -113,6 +114,14 @@ function wpmm_build_menus( $cap ) {
         WPMM_SLUG_SETTINGS,
         'wpmm_render_settings'
     );
+    $hooks[] = add_submenu_page(
+        WPMM_SLUG_PARENT,
+        'Greenskeeper — System Info',
+        'System Info',
+        $cap,
+        WPMM_SLUG_SYSINFO,
+        'wpmm_render_system_info'
+    );
 
     remove_submenu_page( WPMM_SLUG_PARENT, WPMM_SLUG_PARENT );
 }
@@ -145,6 +154,7 @@ function wpmm_enqueue_assets( $hook ) {
         WPMM_SLUG_ACTIVITY,
         WPMM_SLUG_SPAM,
         WPMM_SLUG_SETTINGS,
+        WPMM_SLUG_SYSINFO,
     ];
 
     $is_our_page = false;
@@ -227,6 +237,7 @@ function wpmm_page_header( $active_slug ) {
         WPMM_SLUG_ACTIVITY  => [ 'label' => 'Site Activity', 'icon' => 'list-view' ],
         WPMM_SLUG_SPAM      => [ 'label' => 'Spam Log',      'icon' => 'shield' ],
         WPMM_SLUG_SETTINGS  => [ 'label' => 'Settings',      'icon' => 'admin-settings' ],
+        WPMM_SLUG_SYSINFO   => [ 'label' => 'System Info',   'icon' => 'info' ],
     ];
     ?>
     <?php

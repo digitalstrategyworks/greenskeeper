@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.1.10.3  
+**Version:** 2.1.11  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,8 +705,13 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.1.11
+- Feature: System Info page — server environment, WordPress environment, active theme, active plugins, copy-to-clipboard for support tickets
+- Compatibility: Tested up to WordPress 7.0
+
 ### 2.1.10.3
 - Fix: Plugin/theme names blank in admin notification email — batch results now collected from AJAX responses not DOM scraping
+- Compatibility: Tested and confirmed compatible with WordPress 7.0 — Tested up to updated, Requires at least and Requires PHP added to plugin header
 
 ### 2.1.10.2
 - Fix: All three batch completion banners visible simultaneously — CSS display:flex overrode hidden attribute, fixed with [hidden] selector
@@ -971,8 +976,13 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
 
+### 2.1.11
+- Feature: System Info page — server environment, WordPress environment, active theme, active plugins, copy-to-clipboard for support tickets
+- Compatibility: Tested up to WordPress 7.0
+
 ### 2.1.10.3
 - Fix: Plugin/theme names blank in admin notification email — batch results now collected from AJAX responses not DOM scraping
+- Compatibility: Tested and confirmed compatible with WordPress 7.0 — Tested up to updated, Requires at least and Requires PHP added to plugin header
 
 ### 2.1.10.2
 - Fix: All three batch completion banners visible simultaneously — CSS display:flex overrode hidden attribute, fixed with [hidden] selector

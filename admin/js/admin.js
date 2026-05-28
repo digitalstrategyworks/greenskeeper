@@ -1962,6 +1962,27 @@ jQuery(function ($) {
     })();
 
 
+    // ── System Info — copy to clipboard ────────────────────────────────────
+    $(document).on('click', '#wpmm-sysinfo-copy-btn', function () {
+        var $ta  = $('#wpmm-sysinfo-copy');
+        var $msg = $('#wpmm-sysinfo-copy-msg');
+        $ta[0].select();
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText($ta.val()).then(function () {
+                    $msg.show();
+                    setTimeout(function () { $msg.hide(); }, 2500);
+                });
+            } else {
+                document.execCommand('copy');
+                $msg.show();
+                setTimeout(function () { $msg.hide(); }, 2500);
+            }
+        } catch (e) {
+            $ta[0].select();
+        }
+    });
+
     // ── Notification settings save ──────────────────────────────────────────
     $(document).on('click', '.wpmm-save-notify-settings', function () {
         var $btn = $(this).prop('disabled', true);
