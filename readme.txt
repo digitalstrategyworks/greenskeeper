@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.1.11
+Stable tag:        2.2
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -696,6 +696,18 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.2 =
+* Feature: Vertical sidebar navigation — replaced the horizontal tab
+  bar with a vertical left-sidebar navigation panel. The sidebar is
+  dark navy matching the header, uses icon + label links with a blue
+  left-border active indicator, and has no width constraint — all 8
+  navigation items display on single lines with no wrapping. The main
+  content area is now full-width with no max-width cap, giving all
+  pages significantly more horizontal real estate. A new wpmm-shell /
+  wpmm-body / wpmm-sidebar / wpmm-content-area CSS layout replaces the
+  old wpmm-tabs horizontal nav. wpmm_page_footer() added to close the
+  shell structure at the end of each page renderer.
 
 = 2.1.11 =
 * Feature: System Info page — a new dedicated admin page (Greenskeeper →

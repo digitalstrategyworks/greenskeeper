@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.1.11  
+**Version:** 2.2  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.2
+- Feature: Vertical sidebar navigation — replaces horizontal tab bar, full-width content area, no nav item wrapping
+
 ### 2.1.11
 - Feature: System Info page — server environment, WordPress environment, active theme, active plugins, copy-to-clipboard for support tickets
 - Compatibility: Tested up to WordPress 7.0
@@ -975,6 +978,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.2
+- Feature: Vertical sidebar navigation — replaces horizontal tab bar, full-width content area, no nav item wrapping
 
 ### 2.1.11
 - Feature: System Info page — server environment, WordPress environment, active theme, active plugins, copy-to-clipboard for support tickets

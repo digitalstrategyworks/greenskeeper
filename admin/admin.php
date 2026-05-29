@@ -239,61 +239,80 @@ function wpmm_page_header( $active_slug ) {
         WPMM_SLUG_SETTINGS  => [ 'label' => 'Settings',      'icon' => 'admin-settings' ],
         WPMM_SLUG_SYSINFO   => [ 'label' => 'System Info',   'icon' => 'info' ],
     ];
-    ?>
-    <?php
-    $wpmm_s        = wpmm_get_settings();
-    $wpmm_logo     = ! empty( $wpmm_s['logo_url'] )     ? $wpmm_s['logo_url']     : '';
-    $wpmm_company  = ! empty( $wpmm_s['company_name'] ) ? $wpmm_s['company_name'] : '';
-    ?>
-    <div class="wpmm-header" style="display:flex;flex-direction:column;gap:0;">
 
-        <!-- Row 1: Greenskeeper product logo left, site name/URL right -->
-        <div class="wpmm-header-row wpmm-header-row-primary"
-             style="display:flex;flex-direction:row;align-items:center;width:100%;gap:14px;padding-bottom:10px;">
-            <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;">
-                <img src="<?php echo esc_url( WPMM_PLUGIN_URL . 'admin/images/greenskeeper-logo.png?v=' . WPMM_VERSION ); ?>"
-                     alt="Greenskeeper"
-                     width="140" height="42"
-                     style="height:42px;width:auto;max-width:200px;display:block;">
-                <span style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.04em;padding-left:1px;">v<?php echo esc_html( WPMM_VERSION ); ?></span>
+    $wpmm_s       = wpmm_get_settings();
+    $wpmm_logo    = ! empty( $wpmm_s['logo_url'] )     ? $wpmm_s['logo_url']     : '';
+    $wpmm_company = ! empty( $wpmm_s['company_name'] ) ? $wpmm_s['company_name'] : '';
+    ?>
+    <div class="wpmm-shell">
+
+        <!-- ── Full-width header ─────────────────────────────────────────── -->
+        <div class="wpmm-header">
+
+            <!-- Row 1: product logo left, site name/URL right -->
+            <div class="wpmm-header-row wpmm-header-row-primary">
+                <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;">
+                    <img src="<?php echo esc_url( WPMM_PLUGIN_URL . 'admin/images/greenskeeper-logo.png?v=' . WPMM_VERSION ); ?>"
+                         alt="Greenskeeper" width="140" height="42"
+                         style="height:42px;width:auto;max-width:200px;display:block;">
+                    <span style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.04em;padding-left:1px;">v<?php echo esc_html( WPMM_VERSION ); ?></span>
+                </div>
+                <div class="wpmm-header-site" style="margin-left:auto;">
+                    <span><?php echo esc_html( get_bloginfo( 'name' ) ); ?></span>
+                    <span class="wpmm-header-site-sep">&mdash;</span>
+                    <span class="wpmm-header-site-url"><?php echo esc_url( get_bloginfo( 'url' ) ); ?></span>
+                    <?php if ( wpmm_is_network_context() ) : ?>
+                        <span class="wpmm-badge wpmm-badge-network" style="margin-left:8px;">Network Admin</span>
+                    <?php endif; ?>
+                </div>
             </div>
-            <div style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:12px;color:#93c5fd;flex-wrap:wrap;justify-content:flex-end;">
-                <span><?php echo esc_html( get_bloginfo( 'name' ) ); ?></span>
-                <span style="color:rgba(147,197,253,.4);">&mdash;</span>
-                <span style="color:rgba(147,197,253,.75);"><?php echo esc_url( get_bloginfo( 'url' ) ); ?></span>
-                <?php if ( wpmm_is_network_context() ) : ?>
-                    <span class="wpmm-badge wpmm-badge-network" style="margin-left:8px;">Network Admin</span>
+
+            <!-- Row 2: Agency branding — only when configured -->
+            <?php if ( $wpmm_logo || $wpmm_company ) : ?>
+            <div class="wpmm-header-row wpmm-header-row-secondary">
+                <span style="font-size:11px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.06em;margin-right:4px;">Managed by</span>
+                <?php if ( $wpmm_logo ) : ?>
+                    <img src="<?php echo esc_url( $wpmm_logo ); ?>"
+                         alt="<?php echo esc_attr( $wpmm_company ?: 'Agency Logo' ); ?>"
+                         class="wpmm-header-agency-logo">
+                <?php endif; ?>
+                <?php if ( $wpmm_company ) : ?>
+                    <span class="wpmm-header-agency-name"><?php echo esc_html( $wpmm_company ); ?></span>
                 <?php endif; ?>
             </div>
-        </div>
-
-        <!-- Row 2: Agency logo + company name — secondary, only when configured -->
-        <?php if ( $wpmm_logo || $wpmm_company ) : ?>
-        <div class="wpmm-header-row wpmm-header-row-secondary"
-             style="display:flex;flex-direction:row;align-items:center;width:100%;gap:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.2);">
-            <span style="font-size:11px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.06em;margin-right:4px;">Managed by</span>
-            <?php if ( $wpmm_logo ) : ?>
-                <img src="<?php echo esc_url( $wpmm_logo ); ?>"
-                     alt="<?php echo esc_attr( $wpmm_company ?: 'Agency Logo' ); ?>"
-                     style="height:18px;width:auto;max-width:64px;object-fit:contain;filter:brightness(0) invert(1);opacity:.8;flex-shrink:0;display:block;">
             <?php endif; ?>
-            <?php if ( $wpmm_company ) : ?>
-                <span style="font-size:12px;font-weight:600;color:rgba(255,255,255,.7);white-space:nowrap;"><?php echo esc_html( $wpmm_company ); ?></span>
-            <?php endif; ?>
-        </div>
-        <?php endif; ?>
 
-    </div>
-    <nav class="wpmm-tabs">
-        <?php foreach ( $links as $slug => $info ) : ?>
-            <a href="<?php echo esc_url( wpmm_subpage_url( $slug ) ); ?>"
-               class="wpmm-tab <?php echo $active_slug === $slug ? 'active' : ''; ?>">
-                <span class="dashicons dashicons-<?php echo esc_attr( $info['icon'] ); ?>"></span>
-                <?php echo esc_html( $info['label'] ); ?>
-            </a>
-        <?php endforeach; ?>
-    </nav>
+        </div><!-- /.wpmm-header -->
+
+        <!-- ── Body: sidebar + content ──────────────────────────────────── -->
+        <div class="wpmm-body">
+
+            <!-- Vertical sidebar navigation -->
+            <nav class="wpmm-sidebar" aria-label="Greenskeeper navigation">
+                <?php foreach ( $links as $slug => $info ) : ?>
+                    <a href="<?php echo esc_url( wpmm_subpage_url( $slug ) ); ?>"
+                       class="wpmm-sidebar-link <?php echo $active_slug === $slug ? 'active' : ''; ?>"
+                       <?php echo $active_slug === $slug ? 'aria-current="page"' : ''; ?>>
+                        <span class="dashicons dashicons-<?php echo esc_attr( $info['icon'] ); ?>"></span>
+                        <?php echo esc_html( $info['label'] ); ?>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+
+            <!-- Content area — filled by each page renderer -->
+            <div class="wpmm-content-area">
     <?php
+    // Note: each page renderer wraps its own content.
+    // The closing </div></div> for .wpmm-content-area and .wpmm-body
+    // is output by wpmm_page_footer(), called at the end of each renderer.
+}
+
+/**
+ * Output the closing shell tags.
+ * Must be called at the end of every page renderer that calls wpmm_page_header().
+ */
+function wpmm_page_footer() {
+    echo '</div><!-- /.wpmm-content-area --></div><!-- /.wpmm-body --></div><!-- /.wpmm-shell -->';
 }
 
 
@@ -507,7 +526,7 @@ function wpmm_render_spam_log() {
     ];
 
     ?>
-    <div class="wpmm-wrap">
+    <div class="wrap wpmm-wrap">
         <?php wpmm_page_header( WPMM_SLUG_SPAM ); ?>
         <div class="wpmm-content">
 
@@ -694,6 +713,7 @@ function wpmm_render_spam_log() {
 
             <?php wpmm_tip_card(); ?>
         </div><!-- .wpmm-content -->
+    <?php wpmm_page_footer(); ?>
     </div><!-- .wpmm-wrap -->
     <?php
 }
@@ -766,7 +786,7 @@ function wpmm_render_dashboard() {
         ? date_i18n( 'F j, Y \at g:i A', strtotime( $last_row->updated_at ) )
         : null;
     ?>
-    <div class="wpmm-wrap">
+    <div class="wrap wpmm-wrap">
         <?php wpmm_page_header( WPMM_SLUG_DASHBOARD ); ?>
         <div class="wpmm-content">
 
@@ -868,6 +888,7 @@ function wpmm_render_dashboard() {
 
             <?php wpmm_tip_card(); ?>
         </div><!-- .wpmm-content -->
+    <?php wpmm_page_footer(); ?>
     </div><!-- .wpmm-wrap -->
     <?php
 }
@@ -896,7 +917,7 @@ function wpmm_render_updates() {
     // All administrators for the per-session override selector
     $admins = get_users( [ 'role' => 'administrator', 'orderby' => 'display_name' ] );
     ?>
-    <div class="wpmm-wrap">
+    <div class="wrap wpmm-wrap">
         <?php wpmm_page_header( WPMM_SLUG_UPDATES ); ?>
         <div class="wpmm-content">
 
@@ -1144,6 +1165,7 @@ function wpmm_render_updates() {
 
             <?php wpmm_tip_card(); ?>
         </div>
+    <?php wpmm_page_footer(); ?>
     </div>
     <?php
 }
@@ -1278,7 +1300,7 @@ function wpmm_render_log() {
         return $out;
     };
     ?>
-    <div class="wpmm-wrap">
+    <div class="wrap wpmm-wrap">
         <?php wpmm_page_header( WPMM_SLUG_LOG ); ?>
         <div class="wpmm-content">
 
@@ -1639,6 +1661,7 @@ function wpmm_render_log() {
 
             <?php wpmm_tip_card(); ?>
         </div>
+    <?php wpmm_page_footer(); ?>
     </div>
     <?php
 }
@@ -1694,7 +1717,7 @@ function wpmm_render_email() {
     }
     // ─────────────────────────────────────────────────────────────────────────
     ?>
-    <div class="wpmm-wrap">
+    <div class="wrap wpmm-wrap">
         <?php wpmm_page_header( WPMM_SLUG_EMAIL ); ?>
         <div class="wpmm-content">
             <?php wpmm_site_scope_bar( WPMM_SLUG_EMAIL ); ?>
@@ -2029,6 +2052,7 @@ function wpmm_render_email() {
             </div>
             <?php wpmm_tip_card(); ?>
         </div>
+    <?php wpmm_page_footer(); ?>
     </div>
     <?php
 }

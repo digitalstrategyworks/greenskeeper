@@ -205,7 +205,7 @@ function wpmm_render_settings() {
     $smtp_from_name  = $s['smtp_from_name']  ?? '';
     $has_password    = ! empty( $s['smtp_password_enc'] );
     ?>
-    <div class="wpmm-wrap">
+    <div class="wrap wpmm-wrap">
         <?php wpmm_page_header( WPMM_SLUG_SETTINGS ); ?>
         <div class="wpmm-content">
 
@@ -1203,6 +1203,7 @@ function wpmm_render_settings() {
 
             <?php wpmm_tip_card(); ?>
         </div>
+    <?php wpmm_page_footer(); ?>
     </div>
     <?php
 }
