@@ -243,6 +243,19 @@ function wpmm_page_header( $active_slug ) {
     $wpmm_s       = wpmm_get_settings();
     $wpmm_logo    = ! empty( $wpmm_s['logo_url'] )     ? $wpmm_s['logo_url']     : '';
     $wpmm_company = ! empty( $wpmm_s['company_name'] ) ? $wpmm_s['company_name'] : '';
+
+    // ── Flush WordPress admin notices BEFORE opening the shell ───────────────
+    // WordPress normally renders admin_notices inside <div class="wrap"> but
+    // after any HTML we've already output. With our shell layout that means
+    // notices land inside .wpmm-content-area. By firing the action ourselves
+    // here — before .wpmm-shell opens — notices render above the shell in the
+    // correct WordPress position, then we suppress the default rendering so
+    // they don't duplicate.
+    do_action( 'admin_notices' );         // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+    do_action( 'all_admin_notices' );     // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+    // Remove the hooks so WordPress doesn't fire them again after our output.
+    remove_all_actions( 'admin_notices' );
+    remove_all_actions( 'all_admin_notices' );
     ?>
     <div class="wpmm-shell">
 

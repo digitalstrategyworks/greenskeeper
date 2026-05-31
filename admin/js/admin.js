@@ -1983,6 +1983,38 @@ jQuery(function ($) {
         }
     });
 
+    // ── SMTP defer-to-plugin preference save ───────────────────────────────
+    $(document).on('click', '#wpmm-smtp-defer-save', function () {
+        var $btn     = $(this).prop('disabled', true);
+        var $msg     = $('#wpmm-smtp-defer-msg');
+        var deferred = $('#wpmm-smtp-defer-to-plugin').is(':checked') ? 1 : 0;
+        $msg.html('<span style="color:var(--wpmm-gray);">Saving&hellip;</span>');
+        $.post(wpmm.ajax_url, {
+            action:                  'wpmm_save_smtp',
+            nonce:                   wpmm.nonce,
+            smtp_mailer:             $('#wpmm-smtp-mailer').val() || 'default',
+            smtp_defer_to_plugin:    deferred,
+        }, function (res) {
+            $btn.prop('disabled', false);
+            if (res.success) {
+                $msg.html('<span style="color:var(--wpmm-green);">&#10003; Saved.</span>');
+                // Grey out or restore the card body based on new state.
+                var $body = $('#wpmm-smtp-card-body');
+                if (deferred) {
+                    $body.css({ opacity: '.5', 'pointer-events': 'none', 'user-select': 'none' });
+                } else {
+                    $body.css({ opacity: '', 'pointer-events': '', 'user-select': '' });
+                }
+                setTimeout(function () { $msg.html(''); }, 3000);
+            } else {
+                $msg.html('<span style="color:var(--wpmm-red);">Save failed.</span>');
+            }
+        }).fail(function () {
+            $btn.prop('disabled', false);
+            $msg.html('<span style="color:var(--wpmm-red);">Request failed.</span>');
+        });
+    });
+
     // ── Notification settings save ──────────────────────────────────────────
     $(document).on('click', '.wpmm-save-notify-settings', function () {
         var $btn = $(this).prop('disabled', true);

@@ -706,11 +706,81 @@ function wpmm_render_settings() {
                 <h2 class="wpmm-card-title">
                     <span class="dashicons dashicons-email-alt2"></span> SMTP &amp; Email Delivery
                 </h2>
+
+                <?php
+                // ── Detect competing SMTP plugin ──────────────────────────
+                $smtp_conflict        = function_exists( 'wpmm_detect_smtp_plugin' ) ? wpmm_detect_smtp_plugin() : false;
+                $smtp_defer_active    = $smtp_conflict && ! empty( $s['smtp_defer_to_plugin'] );
+                $smtp_conflict_name   = $smtp_conflict ? esc_html( $smtp_conflict['name'] ) : '';
+                ?>
+
+                <?php if ( $smtp_conflict ) : ?>
+                <!-- Conflict notice — always shown when another SMTP plugin is detected -->
+                <div style="background:<?php echo $smtp_defer_active ? '#eff6ff' : '#fffbeb'; ?>;
+                            border:1px solid <?php echo $smtp_defer_active ? '#bfdbfe' : '#fde68a'; ?>;
+                            border-radius:6px;padding:14px 18px;margin-bottom:20px;
+                            display:flex;gap:12px;align-items:flex-start;">
+                    <span class="dashicons <?php echo $smtp_defer_active ? 'dashicons-info' : 'dashicons-warning'; ?>"
+                          style="color:<?php echo $smtp_defer_active ? '#2563eb' : '#f59e0b'; ?>;
+                                 font-size:20px;width:20px;height:20px;flex-shrink:0;margin-top:1px;"></span>
+                    <div style="flex:1;">
+                        <?php if ( $smtp_defer_active ) : ?>
+                            <strong style="color:#1e40af;display:block;margin-bottom:4px;">
+                                Deferring to <?php echo $smtp_conflict_name; ?>
+                            </strong>
+                            <p style="margin:0 0 10px;font-size:13px;color:#1e3a8a;line-height:1.6;">
+                                <?php echo $smtp_conflict_name; ?> is handling Greenskeeper&rsquo;s email delivery.
+                                Greenskeeper&rsquo;s SMTP settings are saved but not active.
+                                If <?php echo $smtp_conflict_name; ?> fails or is misconfigured,
+                                your maintenance reports may not send and delivery failures
+                                will not appear in Greenskeeper&rsquo;s email log.
+                            </p>
+                        <?php else : ?>
+                            <strong style="color:#92400e;display:block;margin-bottom:4px;">
+                                <?php echo $smtp_conflict_name; ?> is also installed
+                            </strong>
+                            <p style="margin:0 0 10px;font-size:13px;color:#78350f;line-height:1.6;">
+                                Greenskeeper is currently the sender of record for its own emails,
+                                operating independently of <?php echo $smtp_conflict_name; ?>.
+                                This is the recommended setting — Greenskeeper owns its delivery
+                                and log integrity.
+                            </p>
+                        <?php endif; ?>
+                        <!-- Defer checkbox -->
+                        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                            <input type="checkbox"
+                                   id="wpmm-smtp-defer-to-plugin"
+                                   name="smtp_defer_to_plugin"
+                                   value="1"
+                                   style="margin-top:2px;flex-shrink:0;"
+                                   <?php checked( $smtp_defer_active ); ?>>
+                            <span style="font-size:13px;color:<?php echo $smtp_defer_active ? '#1e3a8a' : '#78350f'; ?>;">
+                                Use <?php echo $smtp_conflict_name; ?> instead of Greenskeeper SMTP for
+                                Greenskeeper&rsquo;s emails. This will override Greenskeeper as the mailer of record,
+                                but may impact your log reports if <?php echo $smtp_conflict_name; ?> fails to send
+                                for any reason.
+                            </span>
+                        </label>
+                        <button type="button"
+                                id="wpmm-smtp-defer-save"
+                                class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm"
+                                style="margin-top:12px;">
+                            Save Preference
+                        </button>
+                        <span id="wpmm-smtp-defer-msg" style="font-size:12px;margin-left:10px;"></span>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Card body — greyed out when deferring to another plugin -->
+                <div id="wpmm-smtp-card-body"
+                     style="<?php echo $smtp_defer_active ? 'opacity:.5;pointer-events:none;user-select:none;' : ''; ?>">
+
                 <p class="wpmm-card-desc">
-                    By default WordPress sends email via PHP&rsquo;s <code>mail()</code> function,
-                    which many hosting providers block or which major inboxes mark as spam.
-                    Configure a dedicated SMTP server or third-party email service here to ensure
-                    maintenance reports are reliably delivered.
+                    Greenskeeper manages its own email delivery independently.
+                    Configure a dedicated SMTP server or third-party provider here
+                    to ensure maintenance reports and admin notifications are
+                    reliably delivered regardless of other site email configuration.
                 </p>
 
                 <!-- Mailer selector -->
@@ -923,8 +993,9 @@ function wpmm_render_settings() {
                         <span class="dashicons dashicons-email"></span> Send Now
                     </button>
                     <a href="#" id="wpmm-cancel-test-link" style="font-size:12px;">Cancel</a>
-                </div>
+                </div><!-- #wpmm-smtp-card-body test section -->
 
+            </div><!-- #wpmm-smtp-card-body -->
             </div><!-- #wpmm-smtp-card -->
 
 

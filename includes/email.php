@@ -582,7 +582,9 @@ function wpmm_send_email( $to, $subject, $body, $admin_id = 0, $note = '' ) {
         'From: ' . $from_name . ' <' . $from_email . '>',
     ];
 
-    $sent   = wp_mail( $to, $subject, $body, $headers );
+    // Use wpmm_wp_mail() so Greenskeeper's phpmailer_init hook fires
+    // only for this email, never for other site mail.
+    $sent   = wpmm_wp_mail( $to, $subject, $body, $headers );
     $status = $sent ? 'sent' : 'failed';
 
     $last_session     = get_option( 'wpmm_last_session', [] );
@@ -904,5 +906,5 @@ function wpmm_send_admin_notification( array $results, $admin_id = 0, $session_i
         'From: Greenskeeper <' . get_option( 'admin_email' ) . '>',
     ];
 
-    wp_mail( $to, $subject, $body, $headers );
+    wpmm_wp_mail( $to, $subject, $body, $headers );
 }

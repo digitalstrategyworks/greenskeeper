@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.2
+Stable tag:        2.2.1
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -154,6 +154,26 @@ the integration; you are responsible for holding a valid Akismet licence
 appropriate for your site's use.
 
 == Frequently Asked Questions ==
+
+= Does Greenskeeper conflict with WP Mail SMTP or other SMTP plugins? =
+No — from v2.2.1 onward, Greenskeeper is always the sender of record
+for its own emails by default. It applies its SMTP configuration only
+to emails it initiates (maintenance reports, admin notifications, test
+emails) and never interferes with WooCommerce, contact forms, password
+resets, or any other plugin's mail. When Greenskeeper detects another
+SMTP plugin on the site, it shows an informational notice on the SMTP
+settings card naming the plugin and confirming Greenskeeper is operating
+independently. If you prefer to hand delivery to the detected plugin,
+a checkbox on the settings card lets you do that — with a clear warning
+that a failure in that plugin may prevent Greenskeeper reports from
+sending and will not appear in Greenskeeper's email log.
+
+= Which SMTP plugins does Greenskeeper detect? =
+Greenskeeper detects the following SMTP plugins: WP Mail SMTP,
+FluentSMTP, Post SMTP, Postman SMTP, Easy WP SMTP, Brevo (Sendinblue),
+Gravity SMTP, WP Offload SES, and Gmail SMTP. Detection covers both
+site-activated and network-activated installations on multisite.
+
 
 = Does Greenskeeper include a System Info report? =
 Yes — from v2.1.11 onward, Greenskeeper includes a System Info page
@@ -696,6 +716,27 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.2.1 =
+* Fix: WordPress admin notices from Greenskeeper and other plugins now
+  render above the Greenskeeper UI shell rather than being injected into
+  the content area. The new v2.2 shell layout caused notices to appear
+  mid-page. Fixed by firing admin_notices and all_admin_notices manually
+  before the shell opens, then removing the hooks to prevent duplication.
+* Feature: Greenskeeper SMTP conflict resolution. Greenskeeper is now
+  always the sender of record for its own emails by default. A new
+  wpmm_wp_mail() wrapper function sets $GLOBALS['wpmm_sending'] = true
+  around every Greenskeeper wp_mail() call so the phpmailer_init hook
+  applies Greenskeeper's SMTP settings only to Greenskeeper's own email
+  — never to WooCommerce orders, contact forms, or any other plugin's
+  mail. When another SMTP plugin is detected (WP Mail SMTP, FluentSMTP,
+  Post SMTP, Easy WP SMTP, Brevo, Gravity SMTP, WP Offload SES, Gmail
+  SMTP, Postman SMTP), an informational notice appears on the SMTP
+  settings card naming the detected plugin and confirming Greenskeeper
+  is operating independently. A checkbox lets the admin explicitly defer
+  to the detected plugin instead, with a clear warning that doing so may
+  impact email log integrity if that plugin fails. The SMTP card remains
+  fully visible and editable in both states.
 
 = 2.2 =
 * Feature: Vertical sidebar navigation — replaced the horizontal tab

@@ -22,6 +22,8 @@ function wpmm_get_settings() {
         'notify_all_success'          => 0,  // off by default — low noise
         'notify_partial_success'      => 1,  // on — actionable
         'notify_all_failed'           => 1,  // on — critical
+        // SMTP conflict resolution — 0 = Greenskeeper is sender of record (default).
+        'smtp_defer_to_plugin'        => 0,
     ];
     // Allow other modules (e.g. spam-filter.php) to register their own defaults.
     $defaults = apply_filters( 'wpmm_settings_defaults', $defaults );
