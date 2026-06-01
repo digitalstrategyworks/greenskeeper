@@ -1983,6 +1983,57 @@ jQuery(function ($) {
         }
     });
 
+    // ── Queue session from Update Log ───────────────────────────────────────
+    // When admin clicks "Send to Email Reports →" on an Update Log session,
+    // AJAX queues the session persistently then navigates to Email Reports.
+    $(document).on('click', '.wpmm-queue-session-btn', function (e) {
+        e.stopPropagation();
+        var $btn      = $(this).prop('disabled', true);
+        var sessionId = $btn.data('session');
+        var emailUrl  = $btn.data('email-url');
+        $btn.html('<span class="dashicons dashicons-update wpmm-spin" style="font-size:13px;width:13px;height:13px;vertical-align:middle;margin-right:3px;"></span> Sending&hellip;');
+        $.post(wpmm.ajax_url, {
+            action:     'wpmm_queue_session',
+            nonce:      wpmm.nonce,
+            session_id: sessionId,
+        }, function (res) {
+            if (res.success) {
+                // Navigate to Email Reports — session is persisted, no URL param needed.
+                window.location.href = emailUrl;
+            } else {
+                $btn.prop('disabled', false)
+                    .html('<span class="dashicons dashicons-email-alt" style="font-size:13px;width:13px;height:13px;vertical-align:middle;margin-right:3px;"></span> Send to Email Reports &rarr;');
+                alert('Could not queue session. Please try again.');
+            }
+        }).fail(function () {
+            $btn.prop('disabled', false)
+                .html('<span class="dashicons dashicons-email-alt" style="font-size:13px;width:13px;height:13px;vertical-align:middle;margin-right:3px;"></span> Send to Email Reports &rarr;');
+        });
+    });
+
+    // ── Clear queued session from Email Reports ─────────────────────────────
+    $(document).on('click', '#wpmm-clear-queued-session', function () {
+        var confirmed = window.confirm(
+            'Clear this session from Email Reports?\n\n' +
+            'If you clear the session, the queued update data will be removed from this screen. ' +
+            'You can always return to the Update Log and click "Send to Email Reports" again to reload it.\n\n' +
+            'The update records themselves are never deleted — only the queue pointer is cleared.'
+        );
+        if (!confirmed) { return; }
+        var $btn = $(this).prop('disabled', true);
+        $.post(wpmm.ajax_url, {
+            action: 'wpmm_clear_session',
+            nonce:  wpmm.nonce,
+        }, function (res) {
+            if (res.success) {
+                $('#wpmm-queued-session-panel').fadeOut(300, function () { $(this).remove(); });
+                $('#wpmm-last-session-id').val('');
+            } else {
+                $btn.prop('disabled', false);
+            }
+        });
+    });
+
     // ── SMTP defer-to-plugin preference save ───────────────────────────────
     $(document).on('click', '#wpmm-smtp-defer-save', function () {
         var $btn     = $(this).prop('disabled', true);

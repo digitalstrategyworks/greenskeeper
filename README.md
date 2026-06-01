@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.2.2  
+**Version:** 2.2.3  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,12 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.2.3
+- Feature: Persistent session queue — wpmm_queued_session option stores active session, panel always visible on Email Reports until sent or cleared
+- Feature: Clear Session button with confirmation warning modal
+- Feature: Update Log "Send to Email Reports" button queues via AJAX, navigates cleanly
+- Fix: Queue clears automatically on successful send
+
 ### 2.2.2
 - Fix: Email report could miss entries when retry interrupted session — now reads all update_log rows by session_id directly
 - Feature: Session confirmation panel on Email Reports showing exact count of what will be sent
@@ -986,6 +992,12 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.2.3
+- Feature: Persistent session queue — wpmm_queued_session option stores active session, panel always visible on Email Reports until sent or cleared
+- Feature: Clear Session button with confirmation warning modal
+- Feature: Update Log "Send to Email Reports" button queues via AJAX, navigates cleanly
+- Fix: Queue clears automatically on successful send
 
 ### 2.2.2
 - Fix: Email report could miss entries when retry interrupted session — now reads all update_log rows by session_id directly

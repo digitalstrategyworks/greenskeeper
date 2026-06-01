@@ -1457,17 +1457,18 @@ function wpmm_render_log() {
                                     </span>
                                 </span>
                                 <?php if ( ! $is_legacy && $sid ) : ?>
-                                    <a href="<?php echo esc_url( add_query_arg( [
-                                        'page'       => WPMM_SLUG_EMAIL,
-                                        'session_id' => $sid,
-                                    ], network_admin_url( 'admin.php' ) ) ); ?>"
-                                       class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm"
-                                       style="font-size:11px;padding:3px 10px;margin-right:8px;"
-                                       onclick="event.stopPropagation();"
-                                       title="Open this session in Email Reports to send or resend">
-                                        <span class="dashicons dashicons-email-alt" style="font-size:13px;width:13px;height:13px;vertical-align:middle;margin-right:3px;"></span>
-                                        Send Report &rarr;
-                                    </a>
+                                    <button type="button"
+                                            class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm wpmm-queue-session-btn"
+                                            data-session="<?php echo esc_attr( $sid ); ?>"
+                                            data-email-url="<?php echo esc_url( wpmm_subpage_url( WPMM_SLUG_EMAIL ) ); ?>"
+                                            style="font-size:11px;padding:3px 10px;margin-right:8px;"
+                                            onclick="event.stopPropagation();"
+                                            title="Send this session to Email Reports">
+                                        <span class="dashicons dashicons-email-alt"
+                                              style="font-size:13px;width:13px;height:13px;
+                                                     vertical-align:middle;margin-right:3px;"></span>
+                                        Send to Email Reports &rarr;
+                                    </button>
                                 <?php endif; ?>
                                 <span class="wpmm-session-caret" aria-hidden="true">&#9660;</span>
                             </span>
@@ -1673,32 +1674,47 @@ function wpmm_render_email() {
         : 0;
     global $wpdb;
 
-    // ── Resend from Update Log — session_id passed via URL ────────────────────
-    // When the user clicks "Send Report →" in the Update Log, we land here with
-    // ?session_id=xxx. Pre-load that session's data and check if it was already
-    // emailed so we can show an amber resend notice and prefix the subject.
-    $url_session_id = sanitize_text_field( $_GET['session_id'] ?? '' ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-    $prior_send     = null;
-    $session_log_entries = []; // entries pre-loaded from the DB for display in the confirmation panel
-    $session_summary     = null; // counts for the confirmation panel
+    // ── Queued session resolution ─────────────────────────────────────────────
+    // Priority order:
+    // 1. ?session_id= in URL (admin just clicked "Send to Email Reports" from
+    //    Update Log — queue it persistently then redirect cleanly)
+    // 2. wpmm_queued_session option (persisted from a prior queue action)
+    // 3. Most recent wpmm_pending_sessions entry
+    // 4. wpmm_last_session (backward compat)
 
+    $url_session_id = sanitize_text_field( $_GET['session_id'] ?? '' ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+    // If a session_id is in the URL, persist it and redirect without the param
+    // so the page always loads from the option — no state in the URL.
     if ( $url_session_id ) {
+        update_option( 'wpmm_queued_session', $url_session_id, false );
+        wp_safe_redirect( remove_query_arg( 'session_id' ) );
+        exit;
+    }
+
+    // Read the persisted queued session.
+    $queued_session_id = get_option( 'wpmm_queued_session', '' );
+
+    $prior_send          = null;
+    $session_log_entries = [];
+    $session_summary     = null;
+
+    if ( $queued_session_id ) {
         // Check if previously sent.
         $prior_send = $wpdb->get_row( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
             'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_email_log' ) .
             ' WHERE session_id = %s AND status = "sent" ORDER BY sent_at DESC LIMIT 1',
-            $url_session_id
+            $queued_session_id
         ) );
 
-        // Pre-load ALL log entries for this session directly from the update log.
-        // This is the same data the Update Log page shows — guaranteed complete.
+        // Load all entries for this session directly from the update log.
         $session_log_entries = $wpdb->get_results( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
             'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) .
             ' WHERE session_id = %s ORDER BY updated_at ASC',
-            $url_session_id
+            $queued_session_id
         ) ) ?: [];
 
-        // Build summary counts for the confirmation panel.
+        // Build summary counts.
         $summary_plugins = 0;
         $summary_themes  = 0;
         $summary_core    = 0;
@@ -1711,12 +1727,13 @@ function wpmm_render_email() {
             elseif ( $type === 'core' )    { $summary_core++;    }
         }
         $session_summary = [
-            'plugins' => $summary_plugins,
-            'themes'  => $summary_themes,
-            'core'    => $summary_core,
-            'failed'  => $summary_failed,
-            'total'   => $summary_plugins + $summary_themes + $summary_core,
-            'date'    => ! empty( $session_log_entries )
+            'session_id' => $queued_session_id,
+            'plugins'    => $summary_plugins,
+            'themes'     => $summary_themes,
+            'core'       => $summary_core,
+            'failed'     => $summary_failed,
+            'total'      => $summary_plugins + $summary_themes + $summary_core,
+            'date'       => ! empty( $session_log_entries )
                 ? ( new DateTime( $session_log_entries[0]->updated_at ) )->format( 'F j, Y \a\t g:i A' )
                 : '',
         ];
@@ -1861,10 +1878,9 @@ function wpmm_render_email() {
                      are always included. JS overrides this with the in-page
                      sessionId when updates were run in the current page load. -->
                 <?php
-                // Determine the best session_id to pre-populate.
-                // Priority: URL param (resend flow) → most recent pending session
-                // → wpmm_last_session (backward compat).
-                $prefill_session = $url_session_id;
+                // The queued session always takes priority.
+                // JS overrides with the in-page sessionId when updates ran this load.
+                $prefill_session = $queued_session_id;
                 if ( ! $prefill_session && ! empty( $pending ) ) {
                     $last_p          = end( $pending );
                     $prefill_session = $last_p['session_id'] ?? '';
@@ -1881,18 +1897,32 @@ function wpmm_render_email() {
                     value="<?php echo $prior_send ? esc_attr( $prior_send->sent_at ) : ''; ?>">
 
                 <?php if ( $session_summary ) : ?>
-                <!-- ── Session confirmation panel ───────────────────────── -->
-                <!-- Shown when arriving from the Update Log "Send Report →" button.
-                     Confirms exactly what data has been loaded before the admin sends. -->
-                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;
+                <!-- ── Queued session panel ──────────────────────────────── -->
+                <!-- Always shown when a session is queued, regardless of how
+                     the admin arrived. Persists until email is sent or cleared. -->
+                <div id="wpmm-queued-session-panel"
+                     style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;
                             padding:16px 20px;margin-bottom:20px;">
                     <div style="display:flex;align-items:flex-start;gap:12px;">
                         <span class="dashicons dashicons-yes-alt"
-                              style="color:#2563eb;font-size:22px;width:22px;height:22px;flex-shrink:0;margin-top:1px;"></span>
+                              style="color:#2563eb;font-size:22px;width:22px;height:22px;
+                                     flex-shrink:0;margin-top:1px;"></span>
                         <div style="flex:1;">
-                            <strong style="color:#1e3a8a;display:block;margin-bottom:6px;font-size:14px;">
-                                Update Log session loaded — <?php echo esc_html( $session_summary['date'] ); ?>
-                            </strong>
+                            <div style="display:flex;align-items:center;justify-content:space-between;
+                                        flex-wrap:wrap;gap:8px;margin-bottom:6px;">
+                                <strong style="color:#1e3a8a;font-size:14px;">
+                                    Update Log session queued &mdash; <?php echo esc_html( $session_summary['date'] ); ?>
+                                </strong>
+                                <button type="button"
+                                        id="wpmm-clear-queued-session"
+                                        data-session="<?php echo esc_attr( $session_summary['session_id'] ); ?>"
+                                        class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm"
+                                        style="font-size:11px;color:var(--wpmm-red);border-color:#fca5a5;">
+                                    <span class="dashicons dashicons-dismiss"
+                                          style="font-size:13px;width:13px;height:13px;"></span>
+                                    Clear Session
+                                </button>
+                            </div>
                             <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;">
                                 <?php if ( $session_summary['plugins'] ) : ?>
                                     <span style="font-size:13px;color:#1e40af;">
@@ -1915,17 +1945,19 @@ function wpmm_render_email() {
                                 <?php if ( $session_summary['failed'] ) : ?>
                                     <span style="font-size:13px;color:#92400e;">
                                         <strong><?php echo absint( $session_summary['failed'] ); ?></strong>
-                                        failed (excluded)
+                                        failed (not included)
                                     </span>
                                 <?php endif; ?>
                             </div>
                             <p style="margin:0;font-size:12px;color:#3730a3;line-height:1.5;">
                                 The report will include exactly the
-                                <strong><?php echo absint( $session_summary['total'] ); ?> successful update<?php echo $session_summary['total'] !== 1 ? 's' : ''; ?></strong>
-                                shown above — the same data displayed in the Update Log for this session.
+                                <strong><?php echo absint( $session_summary['total'] ); ?>
+                                successful update<?php echo $session_summary['total'] !== 1 ? 's' : ''; ?></strong>
+                                shown above — the same data in the Update Log for this session.
                                 <?php if ( $session_summary['failed'] ) : ?>
-                                    Failed updates are not included. Retry them from the Update Log if needed.
+                                    Failed items are excluded. Retry them from the Update Log if needed.
                                 <?php endif; ?>
+                                This panel persists until the email is sent or you clear the session.
                             </p>
                         </div>
                     </div>

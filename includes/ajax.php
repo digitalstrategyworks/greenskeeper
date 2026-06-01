@@ -7,6 +7,8 @@ add_action( 'wp_ajax_wpmm_resend_email',     'wpmm_ajax_resend_email' );
 add_action( 'wp_ajax_wpmm_get_updates',      'wpmm_ajax_get_updates' );
 add_action( 'wp_ajax_wpmm_get_email_body',   'wpmm_ajax_get_email_body' );
 add_action( 'wp_ajax_wpmm_batch_complete',   'wpmm_ajax_batch_complete' );
+add_action( 'wp_ajax_wpmm_queue_session',    'wpmm_ajax_queue_session' );
+add_action( 'wp_ajax_wpmm_clear_session',    'wpmm_ajax_clear_session' );
 // wpmm_save_settings is registered in admin/settings.php
 
 // ── Shared capability check ───────────────────────────────────────────────────
@@ -494,11 +496,8 @@ function wpmm_ajax_send_email() {
     $result = wpmm_send_email( $to, $subject, $body, $admin_id, $update_note );
 
     if ( $result['success'] ) {
-        // Always clear pending sessions after a successful send regardless of
-        // whether this was a single-session or multi-session send. This ensures
-        // the next batch starts fresh accumulation and prevents stale sessions
-        // from appearing in subsequent email reports.
         delete_option( 'wpmm_pending_sessions' );
+        delete_option( 'wpmm_queued_session' ); // clear the queued session panel
 
         // Return enough data for the JS to prepend a new row to the history
         // table immediately without a page reload.
@@ -647,6 +646,37 @@ function wpmm_ajax_batch_complete() {
     }
 
     wp_send_json_success( [ 'notified' => ! empty( $results ) ] );
+}
+
+/**
+ * Queue a specific session for sending on the Email Reports page.
+ * Stores the session_id persistently so it survives navigation.
+ * Called when admin clicks "Send to Email Reports" in the Update Log.
+ */
+function wpmm_ajax_queue_session() {
+    check_ajax_referer( 'wpmm_nonce', 'nonce' );
+    if ( ! current_user_can( wpmm_required_cap() ) ) {
+        wp_send_json_error( 'Permission denied.' );
+    }
+    $session_id = sanitize_text_field( wp_unslash( $_POST['session_id'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    if ( ! $session_id ) {
+        wp_send_json_error( 'No session ID provided.' );
+    }
+    update_option( 'wpmm_queued_session', $session_id, false );
+    wp_send_json_success( [ 'session_id' => $session_id ] );
+}
+
+/**
+ * Clear the queued session from Email Reports.
+ * Called when admin clicks "Clear Session" on Email Reports.
+ */
+function wpmm_ajax_clear_session() {
+    check_ajax_referer( 'wpmm_nonce', 'nonce' );
+    if ( ! current_user_can( wpmm_required_cap() ) ) {
+        wp_send_json_error( 'Permission denied.' );
+    }
+    delete_option( 'wpmm_queued_session' );
+    wp_send_json_success();
 }
 
 function wpmm_ajax_search_items() {

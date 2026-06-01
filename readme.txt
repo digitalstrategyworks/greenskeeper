@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.2.2
+Stable tag:        2.2.3
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -716,6 +716,27 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.2.3 =
+* Feature: Persistent session queue for Email Reports. When the admin
+  clicks "Send to Email Reports" on any Update Log session, the session
+  is stored in a WordPress option (wpmm_queued_session) via AJAX and
+  the admin is navigated to Email Reports. The queued session panel
+  appears automatically regardless of how the admin arrives at the
+  screen — it persists across page loads and navigation until the
+  email is sent or the admin explicitly clears it.
+* Feature: Clear session button on the queued session panel. A "Clear
+  Session" button appears on the panel with a confirmation dialog
+  warning the admin that clearing removes the queue pointer (not the
+  underlying update records, which remain in the Update Log). On
+  confirmation the panel fades out and the queue is cleared.
+* Feature: Update Log "Send to Email Reports" button on every non-legacy
+  session. Clicking queues that session persistently via AJAX (no URL
+  parameters) then navigates to Email Reports where the confirmation
+  panel immediately shows the session date, counts of plugins/themes/
+  core updates, and failed items excluded.
+* Fix: Session queue clears automatically on successful email send so
+  the next batch starts fresh.
 
 = 2.2.2 =
 * Fix: Email report sent from Updates page or Update Log "Send Report"
