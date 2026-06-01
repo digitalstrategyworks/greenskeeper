@@ -49,7 +49,6 @@ function wpmm_render_activity_log() {
             </p>
         </div>
         <?php wpmm_page_footer(); ?>
-    </div><!-- .wpmm-wrap -->
         <?php return; endif; ?>
 
         <!-- Toolbar -->
@@ -174,6 +173,5 @@ function wpmm_render_activity_log() {
              style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:99998;"></div>
 
     <?php wpmm_page_footer(); ?>
-    </div>
     <?php
 }

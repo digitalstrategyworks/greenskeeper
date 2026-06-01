@@ -1275,6 +1275,5 @@ function wpmm_render_settings() {
             <?php wpmm_tip_card(); ?>
         </div>
     <?php wpmm_page_footer(); ?>
-    </div>
     <?php
 }

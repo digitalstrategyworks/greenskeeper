@@ -261,7 +261,6 @@ function wpmm_render_system_info() {
 
         </div><!-- /grid -->
     <?php wpmm_page_footer(); ?>
-    </div>
     <?php
 }
 

@@ -243,20 +243,9 @@ function wpmm_page_header( $active_slug ) {
     $wpmm_s       = wpmm_get_settings();
     $wpmm_logo    = ! empty( $wpmm_s['logo_url'] )     ? $wpmm_s['logo_url']     : '';
     $wpmm_company = ! empty( $wpmm_s['company_name'] ) ? $wpmm_s['company_name'] : '';
-
-    // ── Flush WordPress admin notices BEFORE opening the shell ───────────────
-    // WordPress normally renders admin_notices inside <div class="wrap"> but
-    // after any HTML we've already output. With our shell layout that means
-    // notices land inside .wpmm-content-area. By firing the action ourselves
-    // here — before .wpmm-shell opens — notices render above the shell in the
-    // correct WordPress position, then we suppress the default rendering so
-    // they don't duplicate.
-    do_action( 'admin_notices' );         // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
-    do_action( 'all_admin_notices' );     // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
-    // Remove the hooks so WordPress doesn't fire them again after our output.
-    remove_all_actions( 'admin_notices' );
-    remove_all_actions( 'all_admin_notices' );
     ?>
+    </div><!-- /.wpmm-wrap — closed here so WordPress admin_notices render
+               above the shell, not inside it. The shell opens as a sibling. -->
     <div class="wpmm-shell">
 
         <!-- ── Full-width header ─────────────────────────────────────────── -->
@@ -327,7 +316,6 @@ function wpmm_page_header( $active_slug ) {
 function wpmm_page_footer() {
     echo '</div><!-- /.wpmm-content-area --></div><!-- /.wpmm-body --></div><!-- /.wpmm-shell -->';
 }
-
 
 // =========================================================================
 // Capability gate (shared by all renderers)
@@ -727,7 +715,6 @@ function wpmm_render_spam_log() {
             <?php wpmm_tip_card(); ?>
         </div><!-- .wpmm-content -->
     <?php wpmm_page_footer(); ?>
-    </div><!-- .wpmm-wrap -->
     <?php
 }
 
@@ -902,7 +889,6 @@ function wpmm_render_dashboard() {
             <?php wpmm_tip_card(); ?>
         </div><!-- .wpmm-content -->
     <?php wpmm_page_footer(); ?>
-    </div><!-- .wpmm-wrap -->
     <?php
 }
 
@@ -1179,7 +1165,6 @@ function wpmm_render_updates() {
             <?php wpmm_tip_card(); ?>
         </div>
     <?php wpmm_page_footer(); ?>
-    </div>
     <?php
 }
 
@@ -1675,7 +1660,6 @@ function wpmm_render_log() {
             <?php wpmm_tip_card(); ?>
         </div>
     <?php wpmm_page_footer(); ?>
-    </div>
     <?php
 }
 
@@ -2066,6 +2050,5 @@ function wpmm_render_email() {
             <?php wpmm_tip_card(); ?>
         </div>
     <?php wpmm_page_footer(); ?>
-    </div>
     <?php
 }
