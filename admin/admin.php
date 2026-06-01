@@ -1678,13 +1678,48 @@ function wpmm_render_email() {
     // ?session_id=xxx. Pre-load that session's data and check if it was already
     // emailed so we can show an amber resend notice and prefix the subject.
     $url_session_id = sanitize_text_field( $_GET['session_id'] ?? '' ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-    $prior_send     = null; // wpmm_email_log row if this session was previously sent.
+    $prior_send     = null;
+    $session_log_entries = []; // entries pre-loaded from the DB for display in the confirmation panel
+    $session_summary     = null; // counts for the confirmation panel
+
     if ( $url_session_id ) {
+        // Check if previously sent.
         $prior_send = $wpdb->get_row( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
             'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_email_log' ) .
             ' WHERE session_id = %s AND status = "sent" ORDER BY sent_at DESC LIMIT 1',
             $url_session_id
         ) );
+
+        // Pre-load ALL log entries for this session directly from the update log.
+        // This is the same data the Update Log page shows — guaranteed complete.
+        $session_log_entries = $wpdb->get_results( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+            'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) .
+            ' WHERE session_id = %s ORDER BY updated_at ASC',
+            $url_session_id
+        ) ) ?: [];
+
+        // Build summary counts for the confirmation panel.
+        $summary_plugins = 0;
+        $summary_themes  = 0;
+        $summary_core    = 0;
+        $summary_failed  = 0;
+        foreach ( $session_log_entries as $le ) {
+            if ( ( $le->status ?? '' ) !== 'success' ) { $summary_failed++; continue; }
+            $type = strtolower( $le->item_type ?? '' );
+            if ( $type === 'plugin' )      { $summary_plugins++; }
+            elseif ( $type === 'theme' )   { $summary_themes++;  }
+            elseif ( $type === 'core' )    { $summary_core++;    }
+        }
+        $session_summary = [
+            'plugins' => $summary_plugins,
+            'themes'  => $summary_themes,
+            'core'    => $summary_core,
+            'failed'  => $summary_failed,
+            'total'   => $summary_plugins + $summary_themes + $summary_core,
+            'date'    => ! empty( $session_log_entries )
+                ? ( new DateTime( $session_log_entries[0]->updated_at ) )->format( 'F j, Y \a\t g:i A' )
+                : '',
+        ];
     }
 
     // ── Switch to the selected site context for ALL site-specific reads ───────
@@ -1844,6 +1879,58 @@ function wpmm_render_email() {
                     value="<?php echo $prior_send ? '1' : '0'; ?>">
                 <input type="hidden" id="wpmm-prior-sent-at"
                     value="<?php echo $prior_send ? esc_attr( $prior_send->sent_at ) : ''; ?>">
+
+                <?php if ( $session_summary ) : ?>
+                <!-- ── Session confirmation panel ───────────────────────── -->
+                <!-- Shown when arriving from the Update Log "Send Report →" button.
+                     Confirms exactly what data has been loaded before the admin sends. -->
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;
+                            padding:16px 20px;margin-bottom:20px;">
+                    <div style="display:flex;align-items:flex-start;gap:12px;">
+                        <span class="dashicons dashicons-yes-alt"
+                              style="color:#2563eb;font-size:22px;width:22px;height:22px;flex-shrink:0;margin-top:1px;"></span>
+                        <div style="flex:1;">
+                            <strong style="color:#1e3a8a;display:block;margin-bottom:6px;font-size:14px;">
+                                Update Log session loaded — <?php echo esc_html( $session_summary['date'] ); ?>
+                            </strong>
+                            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;">
+                                <?php if ( $session_summary['plugins'] ) : ?>
+                                    <span style="font-size:13px;color:#1e40af;">
+                                        <strong><?php echo absint( $session_summary['plugins'] ); ?></strong>
+                                        plugin<?php echo $session_summary['plugins'] !== 1 ? 's' : ''; ?>
+                                    </span>
+                                <?php endif; ?>
+                                <?php if ( $session_summary['themes'] ) : ?>
+                                    <span style="font-size:13px;color:#1e40af;">
+                                        <strong><?php echo absint( $session_summary['themes'] ); ?></strong>
+                                        theme<?php echo $session_summary['themes'] !== 1 ? 's' : ''; ?>
+                                    </span>
+                                <?php endif; ?>
+                                <?php if ( $session_summary['core'] ) : ?>
+                                    <span style="font-size:13px;color:#1e40af;">
+                                        <strong><?php echo absint( $session_summary['core'] ); ?></strong>
+                                        core update<?php echo $session_summary['core'] !== 1 ? 's' : ''; ?>
+                                    </span>
+                                <?php endif; ?>
+                                <?php if ( $session_summary['failed'] ) : ?>
+                                    <span style="font-size:13px;color:#92400e;">
+                                        <strong><?php echo absint( $session_summary['failed'] ); ?></strong>
+                                        failed (excluded)
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                            <p style="margin:0;font-size:12px;color:#3730a3;line-height:1.5;">
+                                The report will include exactly the
+                                <strong><?php echo absint( $session_summary['total'] ); ?> successful update<?php echo $session_summary['total'] !== 1 ? 's' : ''; ?></strong>
+                                shown above — the same data displayed in the Update Log for this session.
+                                <?php if ( $session_summary['failed'] ) : ?>
+                                    Failed updates are not included. Retry them from the Update Log if needed.
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <?php if ( $prior_send ) :
                     $prior_date = mysql2date( 'F j, Y', $prior_send->sent_at );

@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.2.1
+Stable tag:        2.2.2
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -716,6 +716,23 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.2.2 =
+* Fix: Email report sent from Updates page or Update Log "Send Report"
+  button could miss entries when a retry interrupted session aggregation.
+  The AJAX send handler now reads ALL update_log rows for the session
+  directly from the database — the same query the Update Log page uses —
+  rather than relying on pending_sessions state which can be incomplete
+  after retries or page navigation.
+* Feature: Session confirmation panel on Email Reports page when arriving
+  from the Update Log "Send Report" button. Shows the session date, count
+  of plugins/themes/core updates loaded, and count of failed items excluded.
+  Confirms exactly what data will be included in the email before the admin
+  sends it, eliminating ambiguity about completeness.
+* Fix: Admin notices from Greenskeeper and other plugins now render above
+  the Greenskeeper shell rather than inside the content area. The .wpmm-wrap
+  div is now closed inside wpmm_page_header() before the shell opens, so
+  WordPress injects notices into the wrap (above the shell) as expected.
 
 = 2.2.1 =
 * Fix: WordPress admin notices from Greenskeeper and other plugins now

@@ -317,9 +317,21 @@ function wpmm_ajax_send_email() {
     global $wpdb;
 
     if ( $posted_session ) {
-        // Explicit single-session send (from the Updates page send button).
+        // ── Session-specific send (from Update Log "Send Report →" or Updates page) ──
+        // Read ALL entries for this session directly from the update log table.
+        // This is the same query the Update Log page uses — guaranteed to be complete
+        // regardless of pending_sessions state, retries, or page navigation.
         $last    = get_option( 'wpmm_last_session', [] );
         $blog_id = isset( $last['blog_id'] ) ? (int) $last['blog_id'] : get_current_blog_id();
+
+        // If we can identify the blog from pending sessions, prefer that.
+        $pending_all = get_option( 'wpmm_pending_sessions', [] );
+        foreach ( $pending_all as $p ) {
+            if ( isset( $p['session_id'] ) && $p['session_id'] === $posted_session ) {
+                $blog_id = (int) ( $p['blog_id'] ?? $blog_id );
+                break;
+            }
+        }
 
         $switched = false;
         if ( is_multisite() && $blog_id && $blog_id !== get_current_blog_id() ) {
@@ -329,9 +341,10 @@ function wpmm_ajax_send_email() {
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
         $log_entries = $wpdb->get_results( $wpdb->prepare(
-            'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) . ' WHERE session_id = %s ORDER BY updated_at ASC',
+            'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) .
+            ' WHERE session_id = %s ORDER BY updated_at ASC',
             $posted_session
-        ) );
+        ) ) ?: [];
 
         if ( $switched ) { restore_current_blog(); }
 

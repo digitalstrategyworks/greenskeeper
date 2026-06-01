@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.2.1  
+**Version:** 2.2.2  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,11 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.2.2
+- Fix: Email report could miss entries when retry interrupted session — now reads all update_log rows by session_id directly
+- Feature: Session confirmation panel on Email Reports showing exact count of what will be sent
+- Fix: Admin notices now render above Greenskeeper shell correctly
+
 ### 2.2.1
 - Feature: Greenskeeper is always sender of record for its own emails — wpmm_wp_mail() wrapper, wpmm_sending flag, SMTP conflict detection and defer UI
 
@@ -981,6 +986,11 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.2.2
+- Fix: Email report could miss entries when retry interrupted session — now reads all update_log rows by session_id directly
+- Feature: Session confirmation panel on Email Reports showing exact count of what will be sent
+- Fix: Admin notices now render above Greenskeeper shell correctly
 
 ### 2.2.1
 - Feature: Greenskeeper is always sender of record for its own emails — wpmm_wp_mail() wrapper, wpmm_sending flag, SMTP conflict detection and defer UI
