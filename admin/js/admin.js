@@ -797,11 +797,12 @@ jQuery(function ($) {
                     // ── Prepend new row to the Sent Email History table ───────
                     var row = res.data.row;
                     if (row) {
+                        var safeId = String(row.id).replace(/[^a-z0-9_-]/gi, '-') || ('ts-' + Date.now());
                         var subj   = row.subject.length > 65
                             ? row.subject.substring(0, 65) + '\u2026'
                             : row.subject;
                         var newRow =
-                            '<tr id="wpmm-email-row-' + row.id + '" class="wpmm-history-new">' +
+                            '<tr id="wpmm-email-row-' + safeId + '" class="wpmm-history-new">' +
                             '<td>' + escHtml(row.sent_at) + '</td>' +
                             '<td>' + escHtml(row.to) + '</td>' +
                             '<td>' + escHtml(subj) + '</td>' +
@@ -842,9 +843,9 @@ jQuery(function ($) {
 
                         // Green flash so the user sees the new row land.
                         setTimeout(function () {
-                            $('#wpmm-email-row-' + row.id).addClass('wpmm-history-new-active');
+                            $('#wpmm-email-row-' + safeId).addClass('wpmm-history-new-active');
                             setTimeout(function () {
-                                $('#wpmm-email-row-' + row.id).removeClass('wpmm-history-new-active');
+                                $('#wpmm-email-row-' + safeId).removeClass('wpmm-history-new-active');
                             }, 2000);
                         }, 50);
                     }

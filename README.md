@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.2.3  
+**Version:** 2.2.4  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,10 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.2.4
+- Fix: Email log not updating after send — session_id now passed directly from AJAX handler, note column handled gracefully
+- Fix: JS history row prepend failed when email_id was 0 — safeId with timestamp fallback
+
 ### 2.2.3
 - Feature: Persistent session queue — wpmm_queued_session option stores active session, panel always visible on Email Reports until sent or cleared
 - Feature: Clear Session button with confirmation warning modal
@@ -992,6 +996,10 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.2.4
+- Fix: Email log not updating after send — session_id now passed directly from AJAX handler, note column handled gracefully
+- Fix: JS history row prepend failed when email_id was 0 — safeId with timestamp fallback
 
 ### 2.2.3
 - Feature: Persistent session queue — wpmm_queued_session option stores active session, panel always visible on Email Reports until sent or cleared

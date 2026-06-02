@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.2.3
+Stable tag:        2.2.4
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -716,6 +716,17 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.2.4 =
+* Fix: Email log not updating after send. The wpmm_send_email() function
+  was reading session_id from wpmm_last_session which could be stale or
+  mismatched. Now accepts session_id as a parameter passed directly from
+  the AJAX handler — the correct session is always logged. Also added
+  graceful handling for sites where the note column does not yet exist
+  in wpmm_email_log (pre-v2.1.6 installs).
+* Fix: JS email history row prepend failed silently when email_id was 0.
+  Row ID is now sanitised to a safe DOM selector string before use, with
+  a timestamp fallback ensuring the row always lands and flashes green.
 
 = 2.2.3 =
 * Feature: Persistent session queue for Email Reports. When the admin

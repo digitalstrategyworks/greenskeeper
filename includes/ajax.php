@@ -493,7 +493,7 @@ function wpmm_ajax_send_email() {
     $original_sent_at = sanitize_text_field( wp_unslash( $_POST['original_sent_at'] ?? '' ) );
 
     $body   = wpmm_build_email_body( $log_entries, $admin_id, $manual_entries, $update_note, $is_resend, $original_sent_at );
-    $result = wpmm_send_email( $to, $subject, $body, $admin_id, $update_note );
+    $result = wpmm_send_email( $to, $subject, $body, $admin_id, $update_note, $posted_session );
 
     if ( $result['success'] ) {
         delete_option( 'wpmm_pending_sessions' );

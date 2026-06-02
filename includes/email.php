@@ -557,7 +557,7 @@ function wpmm_get_spam_since_last_report() {
  * @param string $note      Raw administrator note text (stored separately so
  *                          previews can always display it regardless of body version).
  */
-function wpmm_send_email( $to, $subject, $body, $admin_id = 0, $note = '' ) {
+function wpmm_send_email( $to, $subject, $body, $admin_id = 0, $note = '', $session_id = '' ) {
     global $wpdb;
 
     $from_name  = 'Greenskeeper';
@@ -587,29 +587,39 @@ function wpmm_send_email( $to, $subject, $body, $admin_id = 0, $note = '' ) {
     $sent   = wpmm_wp_mail( $to, $subject, $body, $headers );
     $status = $sent ? 'sent' : 'failed';
 
-    $last_session     = get_option( 'wpmm_last_session', [] );
-    $email_session_id = $last_session['session_id'] ?? '';
+    // Use the passed session_id if provided, fall back to last_session.
+    if ( ! $session_id ) {
+        $last_session = get_option( 'wpmm_last_session', [] );
+        $session_id   = $last_session['session_id'] ?? '';
+    }
 
-    $result = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
-        esc_sql( $wpdb->prefix . 'wpmm_email_log' ),
-        [
-            'session_id' => $email_session_id,
-            'to_email'   => $to,
-            'subject'    => $subject,
-            'body'       => $body,
-            'note'       => $note,
-            'status'     => $status,
-            'sent_at'    => current_time( 'mysql' ),
-        ]
-    );
+    $log_table = esc_sql( $wpdb->prefix . 'wpmm_email_log' );
 
-    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- legitimate insert to custom plugin table.
+    // Check whether the note column exists — it was added in v2.1.6.
+    // If it doesn't exist yet (older install), insert without it.
+    $columns = $wpdb->get_col( "DESCRIBE {$log_table}", 0 ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    $has_note = in_array( 'note', $columns, true );
+
+    $row_data = [
+        'session_id' => $session_id,
+        'to_email'   => $to,
+        'subject'    => $subject,
+        'body'       => $body,
+        'status'     => $status,
+        'sent_at'    => current_time( 'mysql' ),
+    ];
+    if ( $has_note ) {
+        $row_data['note'] = $note;
+    }
+
+    $result = $wpdb->insert( $log_table, $row_data ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+
     if ( $result === false && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
         // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error
         trigger_error( 'Greenskeeper: email log insert failed: ' . esc_html( $wpdb->last_error ), E_USER_WARNING );
     }
 
-    return [ 'success' => $sent, 'email_id' => $wpdb->insert_id ];
+    return [ 'success' => $sent, 'email_id' => (int) $wpdb->insert_id ];
 }
 
 /**
