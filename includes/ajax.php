@@ -153,6 +153,30 @@ function wpmm_ajax_run_update() {
 
     $GLOBALS['wpmm_session_id'] = $session_id;
 
+    // ── Already succeeded this session? ──────────────────────────────────────
+    // If this item already has a success row in the update log for the current
+    // session, warn the admin rather than running a potentially confusing retry.
+    // The JS will show an inline amber notice with a "Retry Anyway" option.
+    if ( $session_id && $slug ) {
+        global $wpdb;
+        $already_succeeded = $wpdb->get_var( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+            'SELECT COUNT(*) FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) .
+            ' WHERE session_id = %s AND item_slug = %s AND status = %s',
+            $session_id, $slug, 'success'
+        ) );
+        if ( $already_succeeded ) {
+            wp_send_json_success( [
+                'status'     => 'already_succeeded',
+                'error_code' => 'wpmm_already_succeeded',
+                'severity'   => 'info',
+                'message'    => 'This item was already updated successfully in this session. '
+                              . 'Check the Update Log to confirm. Retry only if you need to force a fresh update.',
+                'slug'       => $slug,
+                'name'       => $slug,
+            ] );
+        }
+    }
+
     $result = wpmm_do_update( $type, $slug, $package );
 
     // Restore blog context BEFORE reading post-update plugin state.

@@ -179,11 +179,20 @@ function wpmm_error_dictionary() {
             'action' => 'Try updating again. If the problem persists, update manually via FTP.',
         ],
         'wpmm_no_transient' => [
-            'label'  => 'No Pending Update Found',
-            'detail' => 'WordPress reported no pending update for this item at the time '
-                      . 'the update was attempted. The update transient may have expired or '
-                      . 'been cleared by another process.',
-            'action' => 'Return to the Updates page, click Refresh Updates, and try again.',
+            'label'  => 'No Pending Update on Record',
+            'detail' => 'WordPress has no pending update recorded for this item — it may have '
+                      . 'already been updated successfully in this session. Check the Update Log '
+                      . 'to confirm. If you need to force a fresh check, use the Refresh Updates '
+                      . 'button and try again.',
+            'action' => 'Check the Update Log. If the update is confirmed, no further action is needed.',
+            'severity' => 'info', // amber, not red — this is ambiguous not a failure
+        ],
+        'wpmm_already_succeeded' => [
+            'label'  => 'Already Updated This Session',
+            'detail' => 'This item was already updated successfully in the current session. '
+                      . 'Retrying is not necessary, but you can force a retry if needed.',
+            'action' => 'No action needed. The Update Log confirms this item is up to date.',
+            'severity' => 'info',
         ],
         'wpmm_version_unchanged' => [
             'label'  => 'Version Unchanged After Update',

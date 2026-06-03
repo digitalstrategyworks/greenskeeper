@@ -197,6 +197,16 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
             if ( $result === true || ( ! is_wp_error( $result ) && ! is_null( $result ) && $result !== false ) ) {
                 $status      = 'success';
                 $new_version = $update->version;
+
+                // ── Dismiss the WordPress "update available" notice ───────────
+                // WordPress shows a persistent "A new version is available" banner
+                // after Core_Upgrader runs because it doesn't know Greenskeeper
+                // handled it. Clearing the update_core transient dismisses the
+                // banner so it doesn't confuse the admin into thinking the update
+                // failed or needs to be retried.
+                delete_site_transient( 'update_core' );
+                wp_version_check(); // schedule a fresh check in the background
+
             } else {
                 $error_code = is_wp_error( $result ) ? $result->get_error_code() : 'update_failed';
                 $message    = is_wp_error( $result ) ? $result->get_error_message() : 'WordPress core update failed.';

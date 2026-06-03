@@ -713,12 +713,14 @@ function wpmm_render_spam_log() {
             </div><!-- .wpmm-card -->
 
             <?php wpmm_tip_card(); ?>
+            <?php wpmm_about_card(); ?>
         </div><!-- .wpmm-content -->
     <?php wpmm_page_footer(); ?>
     <?php
 }
 
 
+// =========================================================================
 // =========================================================================
 // Tip card — call wpmm_tip_card() inside any page's .wpmm-content div
 // =========================================================================
@@ -747,6 +749,69 @@ function wpmm_tip_card() {
                         <span class="wpmm-tip-venmo-handle">&#64;dswks</span>
                     </span>
                 </div>
+            </div>
+        </div>
+    </div>
+    <?php
+}
+
+// =========================================================================
+// About card — shown below the tip card on every page
+// =========================================================================
+function wpmm_about_card() {
+    // Pull Tony's Gravatar using the email hash.
+    // The image is public so no fallback needed, but we use a mystery-person
+    // silhouette just in case.
+    $gravatar_email = 'tony@digitalstrategyworks.com';
+    $gravatar_hash  = md5( strtolower( trim( $gravatar_email ) ) );
+    $gravatar_url   = 'https://www.gravatar.com/avatar/' . $gravatar_hash . '?s=80&d=mp&r=g';
+    ?>
+    <div class="wpmm-card wpmm-about-card" style="margin-top:16px;">
+        <div style="display:flex;align-items:flex-start;gap:16px;">
+
+            <!-- Gravatar -->
+            <img src="<?php echo esc_url( $gravatar_url ); ?>"
+                 alt="Tony Zeoli"
+                 width="64" height="64"
+                 style="width:64px;height:64px;border-radius:50%;flex-shrink:0;
+                        border:2px solid var(--wpmm-border);">
+
+            <!-- Content -->
+            <div style="flex:1;min-width:0;">
+                <h2 class="wpmm-card-title" style="margin-bottom:10px;">
+                    About the Developer
+                </h2>
+
+                <p style="font-size:13px;color:var(--wpmm-text-light);line-height:1.7;margin:0 0 10px;">
+                    Greenskeeper was built by <strong style="color:var(--wpmm-text);">Tony Zeoli</strong>,
+                    a WordPress expert, digital agency owner, and technology strategist with over 20 years
+                    of experience developing websites and digital products for clients across media,
+                    publishing, healthcare, and nonprofit industries. Tony has contributed to the WordPress
+                    community as a speaker and trainer, helping developers and business owners understand
+                    the platform that powers nearly half the web.
+                    <br><br>
+                    <a href="https://tonyzeoli.com" target="_blank" rel="noopener noreferrer"
+                       style="color:var(--wpmm-blue2);text-decoration:none;">tonyzeoli.com</a>
+                    &nbsp;&middot;&nbsp;
+                    <a href="https://digitalstrategyworks.com" target="_blank" rel="noopener noreferrer"
+                       style="color:var(--wpmm-blue2);text-decoration:none;">digitalstrategyworks.com</a>
+                </p>
+
+                <p style="font-size:13px;color:var(--wpmm-text-light);line-height:1.7;margin:0;">
+                    Greenskeeper was born out of a simple frustration: the routine work of maintaining
+                    client WordPress sites was time-consuming, undocumented, and invisible to the people
+                    paying for it. The emergence of generative AI tools &mdash; specifically
+                    <strong style="color:var(--wpmm-text);">Claude by Anthropic</strong> &mdash; brought
+                    the cost of building a professional-grade solution from hundreds of dollars a day down
+                    to the cost of an expensive lunch. Tony used his product management and development
+                    experience alongside AI-assisted prompting methods to bring Greenskeeper from idea to
+                    a fully-featured WordPress plugin, proving that great tools no longer require a team
+                    or a budget to build. Tony also co-develops
+                    <a href="https://radiostation.pro" target="_blank" rel="noopener noreferrer"
+                       style="color:var(--wpmm-blue2);text-decoration:none;">Radio Station PRO</a>
+                    with his partner Tony Hayes &mdash; a WordPress plugin serving internet broadcasters
+                    and streamers that facilitates a radio-like experience on any WordPress website.
+                </p>
             </div>
         </div>
     </div>
@@ -887,6 +952,7 @@ function wpmm_render_dashboard() {
             </div>
 
             <?php wpmm_tip_card(); ?>
+            <?php wpmm_about_card(); ?>
         </div><!-- .wpmm-content -->
     <?php wpmm_page_footer(); ?>
     <?php
@@ -1163,6 +1229,7 @@ function wpmm_render_updates() {
             </div>
 
             <?php wpmm_tip_card(); ?>
+            <?php wpmm_about_card(); ?>
         </div>
     <?php wpmm_page_footer(); ?>
     <?php
@@ -1659,6 +1726,7 @@ function wpmm_render_log() {
             </details>
 
             <?php wpmm_tip_card(); ?>
+            <?php wpmm_about_card(); ?>
         </div>
     <?php wpmm_page_footer(); ?>
     <?php
@@ -2167,6 +2235,7 @@ function wpmm_render_email() {
                 <iframe id="wpmm-modal-iframe" class="wpmm-modal-iframe wpmm-hidden" title="Email preview" sandbox="allow-same-origin"></iframe>
             </div>
             <?php wpmm_tip_card(); ?>
+            <?php wpmm_about_card(); ?>
         </div>
     <?php wpmm_page_footer(); ?>
     <?php

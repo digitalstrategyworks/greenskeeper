@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.2.4  
+**Version:** 2.3  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,17 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.3
+- Feature: About the Developer card with Gravatar on every page
+- Feature: Retry banner turns green on full cumulative success
+- Feature: Core update confirmation notice, auto-dismiss after 4s, clears WP banner
+- Feature: Already-succeeded retry warning (amber, not red)
+- Feature: No-pending-update error shown as amber informational
+- Feature: Persistent session queue, Email Reports confirmation panel, Clear Session button
+- Fix: Email log not updating after send
+- Fix: Email history row not appearing after send
+- Fix: Email report missing entries when retry interrupted session
+
 ### 2.2.4
 - Fix: Email log not updating after send — session_id now passed directly from AJAX handler, note column handled gracefully
 - Fix: JS history row prepend failed when email_id was 0 — safeId with timestamp fallback
@@ -996,6 +1007,17 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.3
+- Feature: About the Developer card with Gravatar on every page
+- Feature: Retry banner turns green on full cumulative success
+- Feature: Core update confirmation notice, auto-dismiss after 4s, clears WP banner
+- Feature: Already-succeeded retry warning (amber, not red)
+- Feature: No-pending-update error shown as amber informational
+- Feature: Persistent session queue, Email Reports confirmation panel, Clear Session button
+- Fix: Email log not updating after send
+- Fix: Email history row not appearing after send
+- Fix: Email report missing entries when retry interrupted session
 
 ### 2.2.4
 - Fix: Email log not updating after send — session_id now passed directly from AJAX handler, note column handled gracefully

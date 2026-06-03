@@ -467,6 +467,7 @@ jQuery(function ($) {
         var batchFailCount    = 0;
         var failedItems       = []; // for retry
         var batchResults      = []; // collected from AJAX responses, not DOM
+        var totalItems        = items.length; // total items selected for this session
 
         function onItemComplete(itemName, success, resultData) {
             if (success) { batchSuccessCount++; } else {
@@ -565,10 +566,14 @@ jQuery(function ($) {
         // ── Retry failed updates ───────────────────────────────────────────
         $(document).on('click', '#wpmm-retry-failed-btn, #wpmm-retry-all-btn', function () {
             $('#wpmm-global-partial, #wpmm-global-allfailed').prop('hidden', true);
-            // Re-run just the failed items.
+
             var itemsToRetry = failedItems.slice();
+            // Reset per-pass counters for the retry run.
+            // batchSuccessCount keeps its value — we need the cumulative total.
+            // Only batchFailCount and failedItems reset so the retry starts clean.
             failedItems    = [];
             batchFailCount = 0;
+
             runUpdatesSequential(
                 itemsToRetry.map(function (f) {
                     return { type: f.type, slug: f.slug, pkg: f.pkg };
@@ -578,19 +583,42 @@ jQuery(function ($) {
                 function () {
                     setTimeout(function () {
                         $('#wpmm-global-progress').prop('hidden', true);
+                        $('#wpmm-global-success, #wpmm-global-partial, #wpmm-global-allfailed')
+                            .prop('hidden', true);
+
                         if (batchFailCount === 0) {
+                            // All items across all passes succeeded.
                             $('#wpmm-success-msg').text(
-                                'All ' + batchSuccessCount + ' update' +
-                                (batchSuccessCount !== 1 ? 's' : '') + ' completed successfully!'
+                                'All ' + batchSuccessCount + ' of ' + totalItems +
+                                ' update' + (totalItems !== 1 ? 's' : '') +
+                                ' completed successfully!'
                             );
                             $('#wpmm-global-success').prop('hidden', false);
+
+                            // Fire batch_complete notification now that everything succeeded.
+                            $.post(wpmm.ajax_url, {
+                                action:     'wpmm_batch_complete',
+                                nonce:      wpmm.nonce,
+                                session_id: sessionId,
+                                admin_id:   performingAdminId,
+                                results:    JSON.stringify(batchResults),
+                            });
+
                         } else if (batchSuccessCount === 0) {
+                            // Everything still failing.
+                            $('#wpmm-allfailed-msg').text(
+                                'All ' + batchFailCount + ' update' +
+                                (batchFailCount !== 1 ? 's' : '') +
+                                ' failed. Retry or check plugin licenses before sending a report.'
+                            );
                             $('#wpmm-global-allfailed').prop('hidden', false);
+
                         } else {
+                            // Still a mix after retry.
                             $('#wpmm-partial-msg').html(
-                                '<strong>' + batchSuccessCount + ' of ' +
-                                (batchSuccessCount + batchFailCount) +
-                                ' updates completed.</strong> ' + batchFailCount + ' still failing.'
+                                '<strong>' + batchSuccessCount + ' of ' + totalItems +
+                                ' updates completed.</strong> ' + batchFailCount + ' update' +
+                                (batchFailCount !== 1 ? 's' : '') + ' still failing.'
                             );
                             $('#wpmm-global-partial').prop('hidden', false);
                         }
@@ -667,7 +695,10 @@ jQuery(function ($) {
             success: function (res) {
                 $btn.prop('disabled', false);
                 var itemName = (res.data && res.data.name) ? res.data.name : slug;
-                var success  = res.success && res.data && res.data.status === 'success';
+                var status   = res.data && res.data.status ? res.data.status : '';
+                var success  = res.success && status === 'success';
+                var alreadyOk = res.success && status === 'already_succeeded';
+                var isInfo   = res.success && res.data && res.data.severity === 'info';
 
                 if (success) {
                     $btn.html('Updated &#10003;')
@@ -675,17 +706,34 @@ jQuery(function ($) {
                         .removeClass('wpmm-btn-primary')
                         .prop('disabled', true);
                     $status.html('<span class="wpmm-status-success">&#9989; Update Successful</span>');
-                    $li.find('.wpmm-item-meta').text('Updated to version ' + res.data.new_version);
+                    $li.find('.wpmm-item-meta').text('Updated to version ' + (res.data.new_version || ''));
+
+                    // ── Core update — auto-dismiss confirmation notice ─────────
+                    if (type === 'core' && res.data.new_version) {
+                        var $notice = $(
+                            '<div class="notice notice-success is-dismissible wpmm-core-notice" ' +
+                            'style="display:flex;align-items:center;gap:10px;padding:12px 16px;">' +
+                            '<span class="dashicons dashicons-yes-alt" style="color:#16a34a;font-size:20px;width:20px;height:20px;"></span>' +
+                            '<p style="margin:0;font-size:14px;">' +
+                            '<strong>WordPress ' + escHtml(res.data.new_version) + ' updated successfully.</strong> ' +
+                            'Your site is running the latest version.</p>' +
+                            '</div>'
+                        );
+                        // Inject above the Greenskeeper shell.
+                        $('.wpmm-shell').before($notice);
+                        // Auto-dismiss after 4 seconds with a smooth fade.
+                        setTimeout(function () {
+                            $notice.fadeOut(600, function () { $notice.remove(); });
+                        }, 4000);
+                    }
 
                     // If plugins were collaterally deactivated and restored, show
-                    // a compact notice in a dedicated full-width row BELOW the item
-                    // so it never wraps or pushes the Updated button to multiple lines.
+                    // a compact notice below the item.
                     if (res.data.collateral_restored && res.data.collateral_restored.length) {
                         var names = res.data.collateral_restored.map(function(p) {
-                            // Show just the plugin folder name, not the full path.
                             return escHtml(p.replace(/\/.*$/, ''));
                         }).join(', ');
-                        var $notice = $(
+                        var $cNotice = $(
                             '<li class="wpmm-item wpmm-collateral-notice" style="' +
                             'background:#fffbeb;border-left:3px solid #f59e0b;padding:6px 16px;' +
                             'font-size:12px;color:#92400e;display:flex;align-items:center;gap:6px;">' +
@@ -695,12 +743,31 @@ jQuery(function ($) {
                             names + '</strong></span>' +
                             '</li>'
                         );
-                        $li.after($notice);
-                        // Fade the notice out after 12 seconds so it doesn't clutter the list.
+                        $li.after($cNotice);
                         setTimeout(function () {
-                            $notice.fadeOut(600, function () { $notice.remove(); });
+                            $cNotice.fadeOut(600, function () { $cNotice.remove(); });
                         }, 12000);
                     }
+
+                } else if (alreadyOk || isInfo) {
+                    // ── Informational / already-succeeded ─────────────────────
+                    // Show amber inline notice — not a red failure.
+                    var infoMsg = (res.data && res.data.message) ? res.data.message : 'No pending update found.';
+                    $btn.html('Retry').removeClass('wpmm-btn-success wpmm-btn-primary')
+                        .css({ background: '', color: '' });
+                    $status.html(
+                        '<span style="display:inline-flex;align-items:flex-start;gap:6px;' +
+                        'background:#fffbeb;border:1px solid #fde68a;border-radius:4px;' +
+                        'padding:6px 10px;font-size:12px;color:#92400e;line-height:1.5;">' +
+                        '<span class="dashicons dashicons-info" style="color:#f59e0b;font-size:14px;' +
+                        'width:14px;height:14px;flex-shrink:0;margin-top:1px;"></span>' +
+                        '<span>' + escHtml(infoMsg) + '</span>' +
+                        '</span>'
+                    );
+                    // Treat as success for batch counting — item is up to date.
+                    callback(itemName, true, res.data || {});
+                    return;
+
                 } else {
                     var msg = '';
                     if (res.data && typeof res.data === 'object' && res.data.message) {

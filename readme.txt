@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.2.4
+Stable tag:        2.3
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -154,6 +154,24 @@ the integration; you are responsible for holding a valid Akismet licence
 appropriate for your site's use.
 
 == Frequently Asked Questions ==
+
+= What happens when I retry an update that already succeeded? =
+From v2.3, Greenskeeper checks whether the item already has a successful
+update record in the current session before running the update again.
+If it does, an amber informational notice appears explaining the item
+is already up to date, with a Retry button still available if you want
+to force a fresh check. The item is counted as successful so the batch
+completion state is not affected.
+
+= Why does the WordPress core update banner disappear after Greenskeeper
+  updates core? =
+Greenskeeper dismisses the WordPress "update available" admin banner
+after a successful core update by clearing the update_core transient.
+It then shows its own confirmation notice — "WordPress X.X updated
+successfully" — which auto-dismisses after 4 seconds. This prevents
+the WordPress banner from persisting and confusing the admin into
+thinking the update needs to be retried.
+
 
 = Does Greenskeeper conflict with WP Mail SMTP or other SMTP plugins? =
 No — from v2.2.1 onward, Greenskeeper is always the sender of record
@@ -716,6 +734,47 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.3 =
+* Feature: About the Developer card shown below the donation card on
+  every page. Includes Tony Zeoli's Gravatar (pulled live), two
+  paragraphs of background on Greenskeeper's origin and Tony's
+  WordPress contributions, and links to tonyzeoli.com,
+  digitalstrategyworks.com, and radiostation.pro.
+* Feature: Retry banner now turns green when all retries succeed.
+  Tracks cumulative success/fail counts across all retry passes using
+  totalItems so the denominator is always the full original batch count.
+  The green banner shows "All 12 of 12 updates completed successfully"
+  and fires the admin notification email on retry success.
+* Feature: WordPress core update confirmation notice. After a successful
+  core update, Greenskeeper dismisses the WordPress "update available"
+  banner (deletes the update_core transient) and injects a green
+  confirmation notice above the shell: "WordPress X.X updated
+  successfully." Auto-dismisses with a fade after 4 seconds.
+* Feature: Already-succeeded retry warning. Before running any update,
+  Greenskeeper checks whether that item already has a success row in the
+  current session's update log. If so, shows an amber informational
+  notice explaining the item is already up to date, with the Retry
+  button still available for a force retry. Item counted as successful
+  so batch completion state is not affected.
+* Feature: No-pending-update error now shown as amber informational
+  message rather than red failure. Updated copy explains the item may
+  have already been updated and directs the admin to the Update Log.
+* Feature: Persistent session queue for Email Reports (wpmm_queued_session
+  option). Update Log "Send to Email Reports" button queues the session
+  via AJAX and navigates cleanly to Email Reports where a blue
+  confirmation panel shows the session date and exact update counts.
+  Panel persists until email is sent or admin clears it. Clear Session
+  button with confirmation warning dialog.
+* Fix: Email log not updating after send. Session ID now passed directly
+  from the AJAX handler to wpmm_send_email() — no longer read from
+  wpmm_last_session which could be stale. Note column handled gracefully
+  for pre-v2.1.6 installs.
+* Fix: Email history row not appearing after send. JS row ID sanitised
+  to safe DOM selector string with Date.now() fallback.
+* Fix: Email report could miss entries when retry interrupted session
+  aggregation. AJAX send handler now reads all update_log rows for the
+  session directly from the database.
 
 = 2.2.4 =
 * Fix: Email log not updating after send. The wpmm_send_email() function
