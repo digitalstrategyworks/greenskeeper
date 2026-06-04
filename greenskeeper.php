@@ -28,6 +28,49 @@ define( 'WPMM_VERSION',    '2.3' );
 define( 'WPMM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPMM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
+// -- Freemius SDK --------------------------------------------------------------
+// Must be initialized before any other plugin code per Freemius documentation.
+// @link https://freemius.com/help/documentation/wordpress-sdk/integrating-freemius-sdk/
+if ( ! function_exists( 'gre_fs' ) ) {
+
+    function gre_fs() {
+        global $gre_fs;
+
+        if ( ! isset( $gre_fs ) ) {
+            // Activate multisite network integration (beta).
+            if ( ! defined( 'WP_FS__PRODUCT_31159_MULTISITE' ) ) {
+                define( 'WP_FS__PRODUCT_31159_MULTISITE', true );
+            }
+
+            // Include Freemius SDK from /freemius/ directory.
+            require_once dirname( __FILE__ ) . '/freemius/start.php';
+
+            $gre_fs = fs_dynamic_init( [
+                'id'               => '31159',
+                'slug'             => 'greenskeeper',
+                'type'             => 'plugin',
+                'public_key'       => 'pk_db006e11abbbcf372c0296b5b9fae',
+                'is_premium'       => false,  // true when building the premium zip
+                'has_addons'       => false,
+                'has_paid_plans'   => true,   // Pro tier in development
+                'is_org_compliant' => true,   // free version on WordPress.org
+                'menu'             => [
+                    'slug'    => 'wpmm-maintenance-manager',
+                    'network' => true,        // multisite network admin support
+                ],
+            ] );
+        }
+
+        return $gre_fs;
+    }
+
+    // Initialize Freemius.
+    gre_fs();
+
+    // Signal that the SDK was initiated so other code can hook in.
+    do_action( 'gre_fs_loaded' );
+}
+
 // Note: load_plugin_textdomain() is included here at the request of the WordPress.org
 // plugin review team. Once the plugin is approved and hosted on WordPress.org,
 // WordPress will load translations automatically and this call becomes a no-op.

@@ -762,9 +762,9 @@ function wpmm_about_card() {
     // Pull Tony's Gravatar using the email hash.
     // The image is public so no fallback needed, but we use a mystery-person
     // silhouette just in case.
-    $gravatar_email = 'tony@digitalstrategyworks.com';
+    $gravatar_email = 'az@digitalstrategyworks.com';
     $gravatar_hash  = md5( strtolower( trim( $gravatar_email ) ) );
-    $gravatar_url   = 'https://www.gravatar.com/avatar/' . $gravatar_hash . '?s=80&d=mp&r=g';
+    $gravatar_url   = 'https://www.gravatar.com/avatar/' . $gravatar_hash . '?s=128&r=g';
     ?>
     <div class="wpmm-card wpmm-about-card" style="margin-top:16px;">
         <div style="display:flex;align-items:flex-start;gap:16px;">
@@ -772,8 +772,8 @@ function wpmm_about_card() {
             <!-- Gravatar -->
             <img src="<?php echo esc_url( $gravatar_url ); ?>"
                  alt="Tony Zeoli"
-                 width="64" height="64"
-                 style="width:64px;height:64px;border-radius:50%;flex-shrink:0;
+                 width="80" height="80"
+                 style="width:80px;height:80px;border-radius:50%;flex-shrink:0;
                         border:2px solid var(--wpmm-border);">
 
             <!-- Content -->
