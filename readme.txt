@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.3
+Stable tag:        2.3.1
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -154,6 +154,20 @@ the integration; you are responsible for holding a valid Akismet licence
 appropriate for your site's use.
 
 == Frequently Asked Questions ==
+
+= Can I preview the email report before sending it to the client? =
+Yes — from v2.3.1 onward, the Email Reports page includes a "Preview
+Email" button next to the Send button. Clicking it opens a full-fidelity
+preview of the email in a modal window, rendered exactly as it will
+appear to the client — including the current update note, any manual
+entries you have added, and all session update data. The preview
+reflects the live state of the form, so if you add a note and click
+Preview, the note appears in the preview immediately. From the preview
+modal you can: click "Send Email" to send without closing the modal,
+click "Go to Updates →" to return to the Updates page if something
+needs to be retried, or click "Close & Edit" to return to the form
+and make changes before sending.
+
 
 = What happens when I retry an update that already succeeded? =
 From v2.3, Greenskeeper checks whether the item already has a successful
@@ -734,6 +748,22 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.3.1 =
+* Feature: Pre-send email preview on the Email Reports page. A "Preview
+  Email" button appears next to the Send button whenever there are
+  pending sessions to send. Clicking it opens the existing email modal
+  in pre-send mode, rendering a full-fidelity preview of exactly what
+  will be sent to the client — including the current update note, manual
+  entries, and all session update data. The preview reflects the live
+  state of the form at the moment Preview is clicked. The modal footer
+  offers three actions: "Send Email" (sends directly from the modal
+  without closing it), "Go to Updates →" (navigates to the Updates page
+  if something needs to be retried or corrected), and "Close & Edit"
+  (returns to the form to make changes before sending). The preview uses
+  a new wpmm_preview_email AJAX handler that builds the full email body
+  using the same wpmm_build_email_body() function as the send handler
+  but saves nothing — no log entry, no pending session changes.
 
 = 2.3 =
 * Feature: About the Developer card shown below the donation card on

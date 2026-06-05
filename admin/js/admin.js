@@ -2051,6 +2051,110 @@ jQuery(function ($) {
         }
     });
 
+    // ── Pre-send email preview ──────────────────────────────────────────────
+    // Opens the existing email modal but builds the body from the current
+    // form state rather than a saved email_id. Shows the pre-send footer
+    // with Send, Go to Updates, and Close & Edit buttons.
+    $(document).on('click', '#wpmm-preview-before-send-btn', function () {
+        var $modal   = $('#wpmm-email-modal');
+        var $iframe  = $('#wpmm-modal-iframe');
+        var $loading = $('#wpmm-modal-loading');
+        var $footer  = $('#wpmm-modal-presend-footer');
+
+        if (!$modal.length) { return; }
+
+        // Collect current form state.
+        var sessionId      = $('#wpmm-last-session-id').val() || '';
+        var updateNote     = $('#wpmm-update-note').val() || '';
+        var adminId        = performingAdminId || 0;
+        var isResend       = $('#wpmm-is-resend').val() || 0;
+        var origSentAt     = $('#wpmm-prior-sent-at').val() || '';
+        var toEmail        = $('#wpmm-email-to-tab').val() || '';
+        var subject        = $('#wpmm-email-subject-tab').val() || '';
+
+        // Collect manual entries.
+        var manualEntries = [];
+        $('#wpmm-manual-rows .wpmm-manual-row').each(function () {
+            var name    = $(this).find('.wpmm-manual-select').val();
+            var oldVer  = $(this).find('.wpmm-manual-old-version').val();
+            var newVer  = $(this).find('.wpmm-manual-new-version').val();
+            if (name) {
+                manualEntries.push({ name: name, old_version: oldVer, new_version: newVer });
+            }
+        });
+
+        // Reset modal for pre-send mode.
+        modalHide($iframe);
+        $iframe.attr('srcdoc', '');
+        $loading.html(
+            '<span class="dashicons dashicons-update wpmm-spin"></span> Building preview&hellip;'
+        );
+        modalShow($loading);
+
+        // Show pre-send subtitle.
+        $('#wpmm-modal-title').text('Pre-Send Preview');
+        $('#wpmm-modal-subtitle').text(
+            'To: ' + (toEmail || '—') + '  ·  ' + (subject || 'No subject')
+        );
+
+        // Show the pre-send footer, hide note block from prior previews.
+        modalShow($footer);
+        $('#wpmm-modal-note').hide();
+
+        // Open modal.
+        $modal.removeClass('wpmm-modal-closed');
+        $('body').css('overflow', 'hidden');
+
+        // Fetch preview body from server.
+        $.post(wpmm.ajax_url, {
+            action:          'wpmm_preview_email',
+            nonce:           wpmm.nonce,
+            session_id:      sessionId,
+            update_note:     updateNote,
+            admin_id:        adminId,
+            is_resend:       isResend,
+            original_sent_at: origSentAt,
+            manual_entries:  JSON.stringify(manualEntries),
+        }, function (res) {
+            modalHide($loading);
+            if (res.success && res.data && res.data.body) {
+                $iframe.attr('srcdoc', res.data.body);
+                modalShow($iframe);
+            } else {
+                $loading.html(
+                    '<p style="color:var(--wpmm-red);padding:16px;">Could not build preview. ' +
+                    'Ensure a session is loaded and try again.</p>'
+                );
+                modalShow($loading);
+            }
+        }).fail(function () {
+            modalHide($loading);
+            $loading.html(
+                '<p style="color:var(--wpmm-red);padding:16px;">Preview request failed. Please try again.</p>'
+            );
+            modalShow($loading);
+        });
+    });
+
+    // ── Send from modal ─────────────────────────────────────────────────────
+    // When admin clicks "Send Email" in the pre-send preview footer,
+    // close the modal and trigger the main send button.
+    $(document).on('click', '#wpmm-modal-send-now-btn', function () {
+        // Close the modal first.
+        $('#wpmm-email-modal').addClass('wpmm-modal-closed');
+        $('body').css('overflow', '');
+        $('#wpmm-modal-presend-footer').addClass('wpmm-hidden');
+        $('#wpmm-modal-title').text('Email Preview');
+        // Trigger the main send flow.
+        $('#wpmm-send-email-btn').trigger('click');
+    });
+
+    // Reset modal title and hide pre-send footer when closed normally.
+    $(document).on('click', '.wpmm-modal-close, .wpmm-modal-overlay', function () {
+        $('#wpmm-modal-presend-footer').addClass('wpmm-hidden');
+        $('#wpmm-modal-title').text('Email Preview');
+    });
+
     // ── Queue session from Update Log ───────────────────────────────────────
     // When admin clicks "Send to Email Reports →" on an Update Log session,
     // AJAX queues the session persistently then navigates to Email Reports.

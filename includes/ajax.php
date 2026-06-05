@@ -9,6 +9,7 @@ add_action( 'wp_ajax_wpmm_get_email_body',   'wpmm_ajax_get_email_body' );
 add_action( 'wp_ajax_wpmm_batch_complete',   'wpmm_ajax_batch_complete' );
 add_action( 'wp_ajax_wpmm_queue_session',    'wpmm_ajax_queue_session' );
 add_action( 'wp_ajax_wpmm_clear_session',    'wpmm_ajax_clear_session' );
+add_action( 'wp_ajax_wpmm_preview_email',    'wpmm_ajax_preview_email' );
 // wpmm_save_settings is registered in admin/settings.php
 
 // ── Shared capability check ───────────────────────────────────────────────────
@@ -677,6 +678,99 @@ function wpmm_ajax_batch_complete() {
  * Stores the session_id persistently so it survives navigation.
  * Called when admin clicks "Send to Email Reports" in the Update Log.
  */
+/**
+ * Generate a pre-send email preview from the current form state.
+ * Builds the email body exactly as it would be sent — including the
+ * current note, manual entries, and queued session data — but does
+ * not send or log anything. Returns the HTML body for iframe display.
+ */
+function wpmm_ajax_preview_email() {
+    check_ajax_referer( 'wpmm_nonce', 'nonce' );
+    if ( ! current_user_can( wpmm_required_cap() ) ) {
+        wp_send_json_error( 'Permission denied.' );
+    }
+
+    global $wpdb;
+
+    // phpcs:disable WordPress.Security.NonceVerification.Missing -- verified above.
+    $session_id   = sanitize_text_field( wp_unslash( $_POST['session_id']   ?? '' ) );
+    $update_note  = sanitize_textarea_field( wp_unslash( $_POST['update_note'] ?? '' ) );
+    $admin_id     = absint( $_POST['admin_id'] ?? 0 );
+    $is_resend    = ! empty( $_POST['is_resend'] ) && (int) $_POST['is_resend'] === 1;
+    $orig_sent_at = sanitize_text_field( wp_unslash( $_POST['original_sent_at'] ?? '' ) );
+    $manual_raw   = sanitize_text_field( wp_unslash( $_POST['manual_entries'] ?? '' ) );
+    // phpcs:enable
+
+    // Parse manual entries.
+    $manual_entries = [];
+    if ( $manual_raw ) {
+        $decoded = json_decode( $manual_raw, true );
+        if ( is_array( $decoded ) ) {
+            foreach ( $decoded as $entry ) {
+                if ( ! empty( $entry['name'] ) ) {
+                    $manual_entries[] = [
+                        'name'        => sanitize_text_field( $entry['name']        ?? '' ),
+                        'old_version' => sanitize_text_field( $entry['old_version'] ?? '' ),
+                        'new_version' => sanitize_text_field( $entry['new_version'] ?? '' ),
+                        'type'        => sanitize_text_field( $entry['type']        ?? 'plugin' ),
+                    ];
+                }
+            }
+        }
+    }
+
+    // Resolve log entries — same logic as the send handler.
+    $log_entries = [];
+    if ( $session_id ) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        $log_entries = $wpdb->get_results( $wpdb->prepare(
+            'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) .
+            ' WHERE session_id = %s ORDER BY updated_at ASC',
+            $session_id
+        ) ) ?: [];
+    }
+
+    // Fall back to pending sessions if no session_id posted.
+    if ( empty( $log_entries ) ) {
+        $pending = get_option( 'wpmm_pending_sessions', [] );
+        foreach ( $pending as $p ) {
+            $sid = $p['session_id'] ?? '';
+            if ( ! $sid ) { continue; }
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+            $rows = $wpdb->get_results( $wpdb->prepare(
+                'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) .
+                ' WHERE session_id = %s ORDER BY updated_at ASC',
+                $sid
+            ) ) ?: [];
+            $log_entries = array_merge( $log_entries, $rows );
+        }
+    }
+
+    // Resolve admin.
+    if ( ! $admin_id ) {
+        $pending_all = get_option( 'wpmm_pending_sessions', [] );
+        if ( ! empty( $pending_all ) ) {
+            $last_p   = end( $pending_all );
+            $admin_id = absint( $last_p['admin_id'] ?? 0 );
+        }
+        if ( ! $admin_id ) {
+            $s        = wpmm_get_settings();
+            $admin_id = absint( $s['default_admin_id'] ?? 0 );
+        }
+    }
+
+    $body = wpmm_build_email_body(
+        $log_entries,
+        $admin_id,
+        $manual_entries,
+        $update_note,
+        $is_resend,
+        $orig_sent_at
+    );
+
+    wp_send_json_success( [ 'body' => $body ] );
+}
+
 function wpmm_ajax_queue_session() {
     check_ajax_referer( 'wpmm_nonce', 'nonce' );
     if ( ! current_user_can( wpmm_required_cap() ) ) {

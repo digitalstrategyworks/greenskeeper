@@ -2140,7 +2140,10 @@ function wpmm_render_email() {
 
                 <hr style="border:none;border-top:1px solid var(--wpmm-border);margin:20px 0;">
 
-                <div class="wpmm-toolbar">
+                <div class="wpmm-toolbar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <button class="wpmm-btn wpmm-btn-secondary" id="wpmm-preview-before-send-btn">
+                        <span class="dashicons dashicons-visibility"></span> Preview Email
+                    </button>
                     <button class="wpmm-btn wpmm-btn-primary" id="wpmm-send-email-btn">
                         <span class="dashicons dashicons-email"></span> Send Report Email
                     </button>
@@ -2233,6 +2236,24 @@ function wpmm_render_email() {
                 </div>
                 <!-- Iframe starts hidden; shown only once content is loaded -->
                 <iframe id="wpmm-modal-iframe" class="wpmm-modal-iframe wpmm-hidden" title="Email preview" sandbox="allow-same-origin"></iframe>
+            </div>
+            <!-- Pre-send action footer — only shown for pre-send previews -->
+            <div id="wpmm-modal-presend-footer" class="wpmm-hidden"
+                 style="padding:14px 20px;border-top:1px solid var(--wpmm-border);
+                        background:#f8fafc;display:flex;align-items:center;
+                        gap:12px;flex-wrap:wrap;">
+                <button type="button" id="wpmm-modal-send-now-btn"
+                        class="wpmm-btn wpmm-btn-primary">
+                    <span class="dashicons dashicons-email"></span> Send Email
+                </button>
+                <a href="<?php echo esc_url( wpmm_subpage_url( WPMM_SLUG_UPDATES ) ); ?>"
+                   class="wpmm-btn wpmm-btn-secondary">
+                    <span class="dashicons dashicons-update"></span> Go to Updates &rarr;
+                </a>
+                <button type="button" class="wpmm-modal-close wpmm-btn wpmm-btn-secondary"
+                        style="margin-left:auto;">
+                    <span class="dashicons dashicons-edit"></span> Close &amp; Edit
+                </button>
             </div>
             <?php wpmm_tip_card(); ?>
             <?php wpmm_about_card(); ?>
