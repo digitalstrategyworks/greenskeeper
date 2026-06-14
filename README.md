@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.3.1  
+**Version:** 2.3.2  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.3.2
+- Fix: Freemius opt-in redirect now goes to Greenskeeper dashboard instead of site home URL
+
 ### 2.3.1
 - Feature: Pre-send email preview modal on Email Reports — full-fidelity preview of current form state before sending, with Send/Go to Updates/Close & Edit actions in modal footer
 
@@ -1010,6 +1013,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.3.2
+- Fix: Freemius opt-in redirect now goes to Greenskeeper dashboard instead of site home URL
 
 ### 2.3.1
 - Feature: Pre-send email preview modal on Email Reports — full-fidelity preview of current form state before sending, with Send/Go to Updates/Close & Edit actions in modal footer

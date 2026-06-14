@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.3.1
+Stable tag:        2.3.2
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -748,6 +748,12 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.3.2 =
+* Fix: Freemius opt-in "Allow and Continue" button was redirecting to
+  the site home URL instead of the Greenskeeper dashboard. Fixed by
+  adding after_activation_url to fs_dynamic_init pointing to the
+  Greenskeeper dashboard page.
 
 = 2.3.1 =
 * Feature: Pre-send email preview on the Email Reports page. A "Preview

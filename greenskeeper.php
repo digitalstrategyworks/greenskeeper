@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Greenskeeper
  * Description: Manage WordPress updates, filter comment spam, send branded email reports, and configure SMTP delivery — all from one dashboard. Supports single-site and Multisite.
- * Version:     2.3.1
+ * Version:     2.3.2
  * Author:      Tony Zeoli
  * Author URI:  https://digitalstrategyworks.com
  * License:     GPL-2.0+
@@ -24,7 +24,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'WPMM_VERSION',    '2.3.1' );
+define( 'WPMM_VERSION',    '2.3.2' );
 define( 'WPMM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPMM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -46,18 +46,21 @@ if ( ! function_exists( 'gre_fs' ) ) {
             require_once dirname( __FILE__ ) . '/freemius/start.php';
 
             $gre_fs = fs_dynamic_init( [
-                'id'               => '31159',
-                'slug'             => 'greenskeeper',
-                'type'             => 'plugin',
-                'public_key'       => 'pk_db006e11abbbcf372c0296b5b9fae',
-                'is_premium'       => false,  // true when building the premium zip
-                'has_addons'       => false,
-                'has_paid_plans'   => true,   // Pro tier in development
-                'is_org_compliant' => true,   // free version on WordPress.org
-                'menu'             => [
+                'id'                   => '31159',
+                'slug'                 => 'greenskeeper',
+                'type'                 => 'plugin',
+                'public_key'           => 'pk_db006e11abbbcf372c0296b5b9fae',
+                'is_premium'           => false,
+                'has_addons'           => false,
+                'has_paid_plans'       => true,
+                'is_org_compliant'     => true,
+                'menu'                 => [
                     'slug'    => 'wpmm-maintenance-manager',
-                    'network' => true,        // multisite network admin support
+                    'network' => true,
                 ],
+                // Redirect to Greenskeeper dashboard after opt-in completes
+                // rather than falling back to the site home URL.
+                'after_activation_url' => admin_url( 'admin.php?page=wpmm-dashboard' ),
             ] );
         }
 
