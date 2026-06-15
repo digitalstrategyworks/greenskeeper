@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Greenskeeper
  * Description: Manage WordPress updates, filter comment spam, send branded email reports, and configure SMTP delivery — all from one dashboard. Supports single-site and Multisite.
- * Version:     2.1.11
+ * Version:     2.3.3
  * Author:      Tony Zeoli
  * Author URI:  https://digitalstrategyworks.com
  * License:     GPL-2.0+
@@ -24,9 +24,55 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'WPMM_VERSION',    '2.1.11' );
+define( 'WPMM_VERSION',    '2.3.3' );
 define( 'WPMM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPMM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+
+// -- Freemius SDK --------------------------------------------------------------
+// Must be initialized before any other plugin code per Freemius documentation.
+// @link https://freemius.com/help/documentation/wordpress-sdk/integrating-freemius-sdk/
+if ( ! function_exists( 'gre_fs' ) ) {
+
+    function gre_fs() {
+        global $gre_fs;
+
+        if ( ! isset( $gre_fs ) ) {
+            // Activate multisite network integration (beta).
+            if ( ! defined( 'WP_FS__PRODUCT_31159_MULTISITE' ) ) {
+                define( 'WP_FS__PRODUCT_31159_MULTISITE', true );
+            }
+
+            // Include Freemius SDK from /freemius/ directory.
+            require_once dirname( __FILE__ ) . '/freemius/start.php';
+
+            $gre_fs = fs_dynamic_init( [
+                'id'                   => '31159',
+                'slug'                 => 'greenskeeper',
+                'type'                 => 'plugin',
+                'public_key'           => 'pk_db006e11abbbcf372c0296b5b9fae',
+                'is_premium'           => false,
+                'has_addons'           => false,
+                'has_paid_plans'       => false,  // set to true when Pro plans are live in Freemius
+                'is_org_compliant'     => true,
+                'menu'                 => [
+                    'slug'    => 'wpmm-maintenance-manager',
+                    'network' => true,
+                ],
+                // Redirect to Greenskeeper dashboard after opt-in completes
+                // rather than falling back to the site home URL.
+                'after_activation_url' => admin_url( 'admin.php?page=wpmm-dashboard' ),
+            ] );
+        }
+
+        return $gre_fs;
+    }
+
+    // Initialize Freemius.
+    gre_fs();
+
+    // Signal that the SDK was initiated so other code can hook in.
+    do_action( 'gre_fs_loaded' );
+}
 
 // Note: load_plugin_textdomain() is included here at the request of the WordPress.org
 // plugin review team. Once the plugin is approved and hosted on WordPress.org,
