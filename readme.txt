@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.3.2
+Stable tag:        2.1.11
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -154,58 +154,6 @@ the integration; you are responsible for holding a valid Akismet licence
 appropriate for your site's use.
 
 == Frequently Asked Questions ==
-
-= Can I preview the email report before sending it to the client? =
-Yes — from v2.3.1 onward, the Email Reports page includes a "Preview
-Email" button next to the Send button. Clicking it opens a full-fidelity
-preview of the email in a modal window, rendered exactly as it will
-appear to the client — including the current update note, any manual
-entries you have added, and all session update data. The preview
-reflects the live state of the form, so if you add a note and click
-Preview, the note appears in the preview immediately. From the preview
-modal you can: click "Send Email" to send without closing the modal,
-click "Go to Updates →" to return to the Updates page if something
-needs to be retried, or click "Close & Edit" to return to the form
-and make changes before sending.
-
-
-= What happens when I retry an update that already succeeded? =
-From v2.3, Greenskeeper checks whether the item already has a successful
-update record in the current session before running the update again.
-If it does, an amber informational notice appears explaining the item
-is already up to date, with a Retry button still available if you want
-to force a fresh check. The item is counted as successful so the batch
-completion state is not affected.
-
-= Why does the WordPress core update banner disappear after Greenskeeper
-  updates core? =
-Greenskeeper dismisses the WordPress "update available" admin banner
-after a successful core update by clearing the update_core transient.
-It then shows its own confirmation notice — "WordPress X.X updated
-successfully" — which auto-dismisses after 4 seconds. This prevents
-the WordPress banner from persisting and confusing the admin into
-thinking the update needs to be retried.
-
-
-= Does Greenskeeper conflict with WP Mail SMTP or other SMTP plugins? =
-No — from v2.2.1 onward, Greenskeeper is always the sender of record
-for its own emails by default. It applies its SMTP configuration only
-to emails it initiates (maintenance reports, admin notifications, test
-emails) and never interferes with WooCommerce, contact forms, password
-resets, or any other plugin's mail. When Greenskeeper detects another
-SMTP plugin on the site, it shows an informational notice on the SMTP
-settings card naming the plugin and confirming Greenskeeper is operating
-independently. If you prefer to hand delivery to the detected plugin,
-a checkbox on the settings card lets you do that — with a clear warning
-that a failure in that plugin may prevent Greenskeeper reports from
-sending and will not appear in Greenskeeper's email log.
-
-= Which SMTP plugins does Greenskeeper detect? =
-Greenskeeper detects the following SMTP plugins: WP Mail SMTP,
-FluentSMTP, Post SMTP, Postman SMTP, Easy WP SMTP, Brevo (Sendinblue),
-Gravity SMTP, WP Offload SES, and Gmail SMTP. Detection covers both
-site-activated and network-activated installations on multisite.
-
 
 = Does Greenskeeper include a System Info report? =
 Yes — from v2.1.11 onward, Greenskeeper includes a System Info page
@@ -748,151 +696,6 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
-
-= 2.3.2 =
-* Fix: Freemius opt-in "Allow and Continue" button was redirecting to
-  the site home URL instead of the Greenskeeper dashboard. Fixed by
-  adding after_activation_url to fs_dynamic_init pointing to the
-  Greenskeeper dashboard page.
-
-= 2.3.1 =
-* Feature: Pre-send email preview on the Email Reports page. A "Preview
-  Email" button appears next to the Send button whenever there are
-  pending sessions to send. Clicking it opens the existing email modal
-  in pre-send mode, rendering a full-fidelity preview of exactly what
-  will be sent to the client — including the current update note, manual
-  entries, and all session update data. The preview reflects the live
-  state of the form at the moment Preview is clicked. The modal footer
-  offers three actions: "Send Email" (sends directly from the modal
-  without closing it), "Go to Updates →" (navigates to the Updates page
-  if something needs to be retried or corrected), and "Close & Edit"
-  (returns to the form to make changes before sending). The preview uses
-  a new wpmm_preview_email AJAX handler that builds the full email body
-  using the same wpmm_build_email_body() function as the send handler
-  but saves nothing — no log entry, no pending session changes.
-
-= 2.3 =
-* Feature: About the Developer card shown below the donation card on
-  every page. Includes Tony Zeoli's Gravatar (pulled live), two
-  paragraphs of background on Greenskeeper's origin and Tony's
-  WordPress contributions, and links to tonyzeoli.com,
-  digitalstrategyworks.com, and radiostation.pro.
-* Feature: Retry banner now turns green when all retries succeed.
-  Tracks cumulative success/fail counts across all retry passes using
-  totalItems so the denominator is always the full original batch count.
-  The green banner shows "All 12 of 12 updates completed successfully"
-  and fires the admin notification email on retry success.
-* Feature: WordPress core update confirmation notice. After a successful
-  core update, Greenskeeper dismisses the WordPress "update available"
-  banner (deletes the update_core transient) and injects a green
-  confirmation notice above the shell: "WordPress X.X updated
-  successfully." Auto-dismisses with a fade after 4 seconds.
-* Feature: Already-succeeded retry warning. Before running any update,
-  Greenskeeper checks whether that item already has a success row in the
-  current session's update log. If so, shows an amber informational
-  notice explaining the item is already up to date, with the Retry
-  button still available for a force retry. Item counted as successful
-  so batch completion state is not affected.
-* Feature: No-pending-update error now shown as amber informational
-  message rather than red failure. Updated copy explains the item may
-  have already been updated and directs the admin to the Update Log.
-* Feature: Persistent session queue for Email Reports (wpmm_queued_session
-  option). Update Log "Send to Email Reports" button queues the session
-  via AJAX and navigates cleanly to Email Reports where a blue
-  confirmation panel shows the session date and exact update counts.
-  Panel persists until email is sent or admin clears it. Clear Session
-  button with confirmation warning dialog.
-* Fix: Email log not updating after send. Session ID now passed directly
-  from the AJAX handler to wpmm_send_email() — no longer read from
-  wpmm_last_session which could be stale. Note column handled gracefully
-  for pre-v2.1.6 installs.
-* Fix: Email history row not appearing after send. JS row ID sanitised
-  to safe DOM selector string with Date.now() fallback.
-* Fix: Email report could miss entries when retry interrupted session
-  aggregation. AJAX send handler now reads all update_log rows for the
-  session directly from the database.
-
-= 2.2.4 =
-* Fix: Email log not updating after send. The wpmm_send_email() function
-  was reading session_id from wpmm_last_session which could be stale or
-  mismatched. Now accepts session_id as a parameter passed directly from
-  the AJAX handler — the correct session is always logged. Also added
-  graceful handling for sites where the note column does not yet exist
-  in wpmm_email_log (pre-v2.1.6 installs).
-* Fix: JS email history row prepend failed silently when email_id was 0.
-  Row ID is now sanitised to a safe DOM selector string before use, with
-  a timestamp fallback ensuring the row always lands and flashes green.
-
-= 2.2.3 =
-* Feature: Persistent session queue for Email Reports. When the admin
-  clicks "Send to Email Reports" on any Update Log session, the session
-  is stored in a WordPress option (wpmm_queued_session) via AJAX and
-  the admin is navigated to Email Reports. The queued session panel
-  appears automatically regardless of how the admin arrives at the
-  screen — it persists across page loads and navigation until the
-  email is sent or the admin explicitly clears it.
-* Feature: Clear session button on the queued session panel. A "Clear
-  Session" button appears on the panel with a confirmation dialog
-  warning the admin that clearing removes the queue pointer (not the
-  underlying update records, which remain in the Update Log). On
-  confirmation the panel fades out and the queue is cleared.
-* Feature: Update Log "Send to Email Reports" button on every non-legacy
-  session. Clicking queues that session persistently via AJAX (no URL
-  parameters) then navigates to Email Reports where the confirmation
-  panel immediately shows the session date, counts of plugins/themes/
-  core updates, and failed items excluded.
-* Fix: Session queue clears automatically on successful email send so
-  the next batch starts fresh.
-
-= 2.2.2 =
-* Fix: Email report sent from Updates page or Update Log "Send Report"
-  button could miss entries when a retry interrupted session aggregation.
-  The AJAX send handler now reads ALL update_log rows for the session
-  directly from the database — the same query the Update Log page uses —
-  rather than relying on pending_sessions state which can be incomplete
-  after retries or page navigation.
-* Feature: Session confirmation panel on Email Reports page when arriving
-  from the Update Log "Send Report" button. Shows the session date, count
-  of plugins/themes/core updates loaded, and count of failed items excluded.
-  Confirms exactly what data will be included in the email before the admin
-  sends it, eliminating ambiguity about completeness.
-* Fix: Admin notices from Greenskeeper and other plugins now render above
-  the Greenskeeper shell rather than inside the content area. The .wpmm-wrap
-  div is now closed inside wpmm_page_header() before the shell opens, so
-  WordPress injects notices into the wrap (above the shell) as expected.
-
-= 2.2.1 =
-* Fix: WordPress admin notices from Greenskeeper and other plugins now
-  render above the Greenskeeper UI shell rather than being injected into
-  the content area. The new v2.2 shell layout caused notices to appear
-  mid-page. Fixed by firing admin_notices and all_admin_notices manually
-  before the shell opens, then removing the hooks to prevent duplication.
-* Feature: Greenskeeper SMTP conflict resolution. Greenskeeper is now
-  always the sender of record for its own emails by default. A new
-  wpmm_wp_mail() wrapper function sets $GLOBALS['wpmm_sending'] = true
-  around every Greenskeeper wp_mail() call so the phpmailer_init hook
-  applies Greenskeeper's SMTP settings only to Greenskeeper's own email
-  — never to WooCommerce orders, contact forms, or any other plugin's
-  mail. When another SMTP plugin is detected (WP Mail SMTP, FluentSMTP,
-  Post SMTP, Easy WP SMTP, Brevo, Gravity SMTP, WP Offload SES, Gmail
-  SMTP, Postman SMTP), an informational notice appears on the SMTP
-  settings card naming the detected plugin and confirming Greenskeeper
-  is operating independently. A checkbox lets the admin explicitly defer
-  to the detected plugin instead, with a clear warning that doing so may
-  impact email log integrity if that plugin fails. The SMTP card remains
-  fully visible and editable in both states.
-
-= 2.2 =
-* Feature: Vertical sidebar navigation — replaced the horizontal tab
-  bar with a vertical left-sidebar navigation panel. The sidebar is
-  dark navy matching the header, uses icon + label links with a blue
-  left-border active indicator, and has no width constraint — all 8
-  navigation items display on single lines with no wrapping. The main
-  content area is now full-width with no max-width cap, giving all
-  pages significantly more horizontal real estate. A new wpmm-shell /
-  wpmm-body / wpmm-sidebar / wpmm-content-area CSS layout replaces the
-  old wpmm-tabs horizontal nav. wpmm_page_footer() added to close the
-  shell structure at the end of each page renderer.
 
 = 2.1.11 =
 * Feature: System Info page — a new dedicated admin page (Greenskeeper →
