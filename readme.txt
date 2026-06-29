@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.3.3
+Stable tag:        2.3.4
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -154,6 +154,33 @@ the integration; you are responsible for holding a valid Akismet licence
 appropriate for your site's use.
 
 == Frequently Asked Questions ==
+
+= How does WordPress.org's "Protect The Shire" update policy affect Greenskeeper? =
+In June 2026 WordPress.org introduced a mandatory up-to-24-hour hold on all new
+plugin and theme updates as part of its "Protect The Shire" initiative. An AI
+security scanner reviews code changes during this window before they are
+distributed to sites with automatic updates enabled. The policy was introduced
+in response to a rise in AI-accelerated supply chain attacks targeting
+open-source plugin repositories.
+
+Greenskeeper users are largely unaffected by this delay. The 24-hour hold
+applies to automatic background updates — Greenskeeper's workflow is the
+opposite of that. Every update you run through Greenskeeper is deliberate,
+manually triggered, and documented with a full audit trail. You are not waiting
+for WordPress to push an update to your site; you are deciding when and what
+to update.
+
+The one area where the delay is felt is in update discovery — a new plugin
+release or security patch may not appear on Greenskeeper's Updates page for up
+to 24 hours after the developer publishes it, because WordPress.org holds the
+release in its review queue before making it available via the update API. If
+you need to apply a critical security patch before it appears in the update
+queue, you can install the updated plugin manually by downloading it directly
+from the developer and uploading it via SFTP or the WordPress plugin upload
+screen. Greenskeeper's Update Log and Email Reports pages support manual update
+entries so the patch can still be documented and reported to your client even
+when applied outside the plugin.
+
 
 = Can I preview the email report before sending it to the client? =
 Yes — from v2.3.1 onward, the Email Reports page includes a "Preview
@@ -747,6 +774,20 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.3.4 =
+* Fix: Plugin names displayed as raw file paths (e.g.
+  perfmatters/perfmatters.php) in email report "Needs Attention"
+  section. When item_name contains a file path, the name is now
+  extracted and title-cased for client-friendly display.
+* Fix: Missing reason text in "Needs Attention" email rows. When
+  no specific error code or message was available, the warning icon
+  appeared with no explanation. A fallback reason is now always
+  shown so the client always knows what action to take.
+* Fix applied to both the client-facing email report and the
+  internal admin notification email.
+* FAQ: Added entry explaining how WordPress.org's "Protect The
+  Shire" 24-hour update hold policy affects Greenskeeper users.
 
 = 2.3.3 =
 * Fix: Malformed FAQ heading for the core update banner question — the

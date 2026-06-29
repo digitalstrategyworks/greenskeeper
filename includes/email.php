@@ -148,6 +148,22 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
 
             $name = isset( $entry->item_name ) ? esc_html( $entry->item_name ) : '(unknown)';
 
+            // If item_name is a file path (e.g. perfmatters/perfmatters.php),
+            // extract a readable name from the slug instead.
+            if ( str_contains( $name, '/' ) || str_contains( $name, '.php' ) ) {
+                $raw  = $entry->item_slug ?? $entry->item_name ?? '';
+                $raw  = preg_replace( '/\.php$/', '', basename( $raw ) );
+                $name = esc_html( ucwords( str_replace( [ '-', '_' ], ' ', $raw ) ) );
+            }
+
+            // Always show a reason for failed items — never leave the icon alone.
+            if ( ! $success && empty( trim( strip_tags( $note ) ) ) ) {
+                $note = '<br><small style="color:#92400e;">'
+                      . 'This item could not be updated automatically. '
+                      . 'Please update it manually via Dashboard &rarr; Updates.'
+                      . '</small>';
+            }
+
             // Row background — amber tint for failures so they stand out gently.
             $row_bg = $success ? '' : 'background:#fffbeb;';
 
@@ -851,12 +867,24 @@ function wpmm_send_admin_notification( array $results, $admin_id = 0, $session_i
         $error_code = $r['error_code'] ?? '';
         $reason     = $error_code === 'no_package' || $error_code === 'wpmm_requires_manual'
             ? 'License required — update manually'
-            : ( $r['message'] ?? 'Update failed' );
-        // Strip DEBUG strings from internal notification too.
-        $reason = preg_replace( '/\s*DEBUG:.*$/s', '', $reason );
+            : ( $r['message'] ?? '' );
+        // Strip DEBUG strings.
+        $reason = preg_replace( '/\s*DEBUG:.*$/s', '', trim( $reason ) );
+        // Always show a reason — never leave the icon alone.
+        if ( empty( $reason ) ) {
+            $reason = 'Could not be updated automatically — please update manually.';
+        }
+
+        // Clean up raw file path names (e.g. perfmatters/perfmatters.php).
+        $display_name = $r['name'] ?? $r['slug'] ?? '';
+        if ( str_contains( $display_name, '/' ) || str_contains( $display_name, '.php' ) ) {
+            $raw          = preg_replace( '/\.php$/', '', basename( $display_name ) );
+            $display_name = ucwords( str_replace( [ '-', '_' ], ' ', $raw ) );
+        }
+
         $rows_failed .= '<tr style="background:#fffbeb;">'
             . '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">'
-            . esc_html( $r['name'] ?? $r['slug'] ?? '' )
+            . esc_html( $display_name )
             . '</td>'
             . '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:12px;">'
             . esc_html( $r['old_version'] ?? '' )
