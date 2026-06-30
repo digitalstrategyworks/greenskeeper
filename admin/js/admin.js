@@ -452,7 +452,6 @@ jQuery(function ($) {
         }
 
         // Reset progress bar state for the new batch.
-        var totalItems     = items.length;
         var completedItems = 0;
 
         $('#wpmm-global-success').prop('hidden', true);
@@ -467,7 +466,7 @@ jQuery(function ($) {
         var batchFailCount    = 0;
         var failedItems       = []; // for retry
         var batchResults      = []; // collected from AJAX responses, not DOM
-        var totalItems        = items.length; // total items selected for this session
+        var totalItems        = items.length; // total items — never changes across retry passes
 
         function onItemComplete(itemName, success, resultData) {
             if (success) { batchSuccessCount++; } else {
@@ -525,8 +524,8 @@ jQuery(function ($) {
                 if (batchFailCount === 0) {
                     // ── State A: All succeeded ──────────────────────────────
                     $('#wpmm-success-msg').text(
-                        'All ' + batchSuccessCount + ' update' +
-                        (batchSuccessCount !== 1 ? 's' : '') + ' completed successfully!'
+                        'All ' + batchSuccessCount + ' of ' + totalItems +
+                        ' update' + (totalItems !== 1 ? 's' : '') + ' completed successfully!'
                     );
                     $('#wpmm-global-success').prop('hidden', false);
 
@@ -542,7 +541,7 @@ jQuery(function ($) {
                 } else {
                     // ── State B: Partial success ────────────────────────────
                     $('#wpmm-partial-msg').html(
-                        '<strong>' + batchSuccessCount + ' of ' + (batchSuccessCount + batchFailCount) +
+                        '<strong>' + batchSuccessCount + ' of ' + totalItems +
                         ' updates completed.</strong> ' + batchFailCount + ' update' +
                         (batchFailCount !== 1 ? 's' : '') +
                         ' failed — retry them now, or send the report with successful updates only.'

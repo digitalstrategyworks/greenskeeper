@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.3.4
+Stable tag:        2.3.5
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -774,6 +774,15 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.3.5 =
+* Fix: Retry success banner not updating after a failed update was
+  retried and succeeded. The amber "13 of 14 updates completed" banner
+  was not changing to the green success banner because of a duplicate
+  var totalItems declaration that caused a scoping conflict. Removed
+  the duplicate, unified totalItems as a single declaration that
+  persists across all retry passes. First-pass partial banner now also
+  uses totalItems as the denominator for consistency.
 
 = 2.3.4 =
 * Fix: Plugin names displayed as raw file paths (e.g.

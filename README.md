@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.3.4  
+**Version:** 2.3.5  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.3.5
+- Fix: Retry success banner not updating after retry succeeded — duplicate totalItems var causing scoping conflict
+
 ### 2.3.4
 - Fix: Plugin names showing as raw file paths in Needs Attention email rows
 - Fix: Missing reason text in Needs Attention rows — fallback always shown
@@ -1022,6 +1025,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.3.5
+- Fix: Retry success banner not updating after retry succeeded — duplicate totalItems var causing scoping conflict
 
 ### 2.3.4
 - Fix: Plugin names showing as raw file paths in Needs Attention email rows
