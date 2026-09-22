@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.4.1
+Stable tag:        2.4.2
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -799,7 +799,7 @@ For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
 
-= 2.4.1 =
+= 2.4.2 =
 * Fix: "Disable All Auto-Updates" button was unclickable on both
   single site and multisite installations. Two root causes fixed:
   (1) prop('disabled', true) fired before the click could register —
