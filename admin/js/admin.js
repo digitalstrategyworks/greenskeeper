@@ -747,7 +747,9 @@ jQuery(function ($) {
         'aioseo', 'all-in-one-seo', 'woocommerce', 'elementor',
         'gravityforms', 'gravity-forms', 'wordfence', 'wordpress-seo',
         'yoast', 'jetpack', 'rankmath', 'rank-math', 'wpml',
-        'the-events-calendar', 'tribe', 'learndash', 'memberpress'
+        'the-events-calendar', 'tribe', 'learndash', 'memberpress',
+        'performance-lab', 'sucuri', 'wp-offload-media',
+        'amazon-s3-and-cloudfront'
     ];
 
     function wpmm_is_heavy_slug(slug) {

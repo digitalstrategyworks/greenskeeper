@@ -155,6 +155,30 @@ appropriate for your site's use.
 
 == Frequently Asked Questions ==
 
+= How do I disable WordPress auto-updates for all plugins and themes? =
+Greenskeeper includes a built-in "Disable All Auto-Updates" feature
+available in two places. On the Updates page, an amber warning banner
+appears whenever any plugins or themes have auto-updates enabled,
+showing the exact count and a "Disable All Auto-Updates" button. On
+the Settings page, the Auto-Updates card shows the current status —
+green if all auto-updates are disabled, amber if any are enabled —
+with the same disable button. Clicking either button disables
+auto-updates for all plugins and themes in one action and logs the
+change to the Site Activity Log. A green confirmation card then appears
+with instructions for re-enabling individual auto-updates via the
+WordPress Plugins admin screen. The feature works on both single site
+and multisite WordPress installations.
+
+= Why should I disable WordPress auto-updates when using Greenskeeper? =
+WordPress auto-updates run silently in the background, bypassing
+Greenskeeper's update log and client reports. When a plugin auto-updates
+without going through Greenskeeper, the change is not recorded in the
+Update Log and will not appear in email reports sent to your clients.
+Disabling auto-updates ensures that every update on a site goes through
+Greenskeeper's documented, deliberate workflow — giving you full control
+over when updates run, a complete audit trail, and accurate client reports.
+
+
 = How does WordPress.org's "Protect The Shire" update policy affect Greenskeeper? =
 In June 2026 WordPress.org introduced a mandatory up-to-24-hour hold on all new
 plugin and theme updates as part of its "Protect The Shire" initiative. An AI
@@ -776,11 +800,18 @@ For licensing enquiries contact: tony@digitalstrategyworks.com
 == Changelog ==
 
 = 2.4.1 =
-* Fix: "Disable All Auto-Updates" button on the Updates page was
-  unclickable. The previous implementation called prop('disabled', true)
-  before the click could fully register, blocking the AJAX call from
-  firing. Replaced with a data-working flag approach that prevents
-  double-clicks without blocking the initial click event.
+* Fix: "Disable All Auto-Updates" button was unclickable on both
+  single site and multisite installations. Two root causes fixed:
+  (1) prop('disabled', true) fired before the click could register —
+  replaced with a data-working flag. (2) The AJAX capability check
+  used wpmm_required_cap() which returns manage_network in network
+  admin context — AJAX requests don't carry the network admin context
+  flag so the check silently failed for all users. Fixed to check
+  all three capabilities explicitly: wpmm_access (single site),
+  manage_options (admin fallback), and manage_network (multisite
+  super admin). Any one of the three being true allows the action.
+* Fix: ajax_url now uses network_admin_url() in network admin context
+  to ensure AJAX requests route correctly in multisite installations.
 * Fix: Per-item Retry button (in the plugin row) was not updating the
   amber completion banner when the retry succeeded. The click handler
   was passing an empty callback to runSingleUpdate, so batchSuccessCount
@@ -789,6 +820,10 @@ For licensing enquiries contact: tony@digitalstrategyworks.com
   decrements batchFailCount when a previously failed item succeeds,
   and re-evaluates the bottom banner state — switching from amber to
   green when all items have completed successfully.
+* Fix: Added Performance Lab, Sucuri, WP Offload Media, and
+  Amazon S3 and CloudFront to the known heavy-hitter list —
+  these plugins receive an 8-second recovery pause after updating
+  to prevent cascading 500 errors on subsequent updates.
 * Fix: "Already succeeded" items showing an amber notice with a Retry
   button instead of the green "Updated ✓" success state. When the
   server returns already_succeeded, the item is confirmed up to date

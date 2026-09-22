@@ -781,7 +781,13 @@ function wpmm_ajax_preview_email() {
  */
 function wpmm_ajax_disable_auto_updates() {
     check_ajax_referer( 'wpmm_nonce', 'nonce' );
-    if ( ! current_user_can( wpmm_required_cap() ) ) {
+    // Check all three caps — wpmm_access (single site), manage_options (admin
+    // fallback), manage_network (multisite super admin). AJAX requests don't
+    // carry the network admin context flag so we check all explicitly.
+    $allowed = current_user_can( 'wpmm_access' )
+            || current_user_can( 'manage_options' )
+            || current_user_can( 'manage_network' );
+    if ( ! $allowed ) {
         wp_send_json_error( 'Permission denied.' );
     }
 
