@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.4.2  
+**Version:** 2.4.3  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,7 +705,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
-### 2.4.2
+### 2.4.3
+- Compatibility: Tested up to WordPress 7.2; confirmed compatible with all 7.1 core changes
+
 - Fix: Disable All Auto-Updates button unclickable — replaced prop(disabled) with data-working flag
 - Fix: Per-item Retry not updating amber banner — now feeds back into batch counters and re-evaluates banner state
 - Fix: already_succeeded shows green success state instead of amber notice with Retry button
@@ -1059,7 +1061,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
 
-### 2.4.2
+### 2.4.3
+- Compatibility: Tested up to WordPress 7.2; confirmed compatible with all 7.1 core changes
+
 - Fix: Disable All Auto-Updates button unclickable — replaced prop(disabled) with data-working flag
 - Fix: Per-item Retry not updating amber banner — now feeds back into batch counters and re-evaluates banner state
 - Fix: already_succeeded shows green success state instead of amber notice with Retry button

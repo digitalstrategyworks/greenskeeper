@@ -4,9 +4,9 @@ Author:            Tony Zeoli
 Author URI:        https://digitalstrategyworks.com
 Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
-Tested up to:      7.0
+Tested up to:      7.2
 Requires PHP:      8.0
-Stable tag:        2.4.2
+Stable tag:        2.4.3
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -798,6 +798,17 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.4.3 =
+* Compatibility: Tested and confirmed compatible with WordPress 7.2.
+  Tested up to value updated to 7.2. The WordPress 7.1 changes to the
+  iframed editor, client-side media processing, @wordpress/components,
+  the persistent toolbar, the SVG Icon API, and the Abilities API do
+  not affect Greenskeeper as it does not interact with the post editor,
+  media uploads, or WordPress component library styles. jQuery UI was
+  updated from 1.13.3 to 1.14.2 in WordPress 7.1 — Greenskeeper uses
+  jquery-ui-datepicker which remains compatible with backward
+  compatibility enabled.
 
 = 2.4.2 =
 * Fix: "Disable All Auto-Updates" button was unclickable on both
