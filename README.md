@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.4.3  
+**Version:** 2.4.4  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.4.4
+- Fix: AJAX request failed on network admin — wpmm_ajax_cap_check now handles all four permission contexts
+
 ### 2.4.3
 - Compatibility: Tested up to WordPress 7.2; confirmed compatible with all 7.1 core changes
 
@@ -1060,6 +1063,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.4.4
+- Fix: AJAX request failed on network admin — wpmm_ajax_cap_check now handles all four permission contexts
 
 ### 2.4.3
 - Compatibility: Tested up to WordPress 7.2; confirmed compatible with all 7.1 core changes

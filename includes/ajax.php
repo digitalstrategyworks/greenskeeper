@@ -22,7 +22,14 @@ add_action( 'wp_ajax_wpmm_disable_auto_updates','wpmm_ajax_disable_auto_updates'
  */
 function wpmm_ajax_cap_check() {
     check_ajax_referer( 'wpmm_nonce', 'nonce' );
-    if ( ! current_user_can( wpmm_required_cap() ) ) {
+    // AJAX requests don't carry the network admin context flag, so
+    // current_user_can('manage_network') can return false for super admins
+    // in network admin AJAX calls. Check all three caps explicitly.
+    $allowed = current_user_can( wpmm_required_cap() )
+            || current_user_can( 'manage_options' )
+            || current_user_can( 'manage_network' )
+            || is_super_admin();
+    if ( ! $allowed ) {
         wp_send_json_error( 'Permission denied.' );
     }
 }

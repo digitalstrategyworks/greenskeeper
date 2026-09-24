@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.2
 Requires PHP:      8.0
-Stable tag:        2.4.3
+Stable tag:        2.4.4
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -798,6 +798,19 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.4.4 =
+* Fix: "AJAX request failed" error on the network admin Updates page.
+  The base wpmm_ajax_cap_check() function used by all AJAX handlers
+  called current_user_can(wpmm_required_cap()) which returns
+  manage_network in network admin context. AJAX requests in WordPress
+  do not carry the network admin context flag, so the capability check
+  silently failed for super admins on every network admin AJAX call —
+  including loading the updates list, running updates, and sending
+  email reports. Fixed to check wpmm_access, manage_options,
+  manage_network, and is_super_admin() explicitly so the check works
+  correctly in all contexts: single site, multisite per-site, and
+  multisite network admin.
 
 = 2.4.3 =
 * Compatibility: Tested and confirmed compatible with WordPress 7.2.
