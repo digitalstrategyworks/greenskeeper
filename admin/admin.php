@@ -190,7 +190,7 @@ function wpmm_enqueue_assets( $hook ) {
         $script_deps, WPMM_VERSION, true );
 
     wp_localize_script( 'wpmm-admin', 'wpmm', [
-        'ajax_url'    => wpmm_is_network_context() ? network_admin_url( 'admin-ajax.php' ) : admin_url( 'admin-ajax.php' ),
+        'ajax_url'    => admin_url( 'admin-ajax.php' ),
         'nonce'       => wp_create_nonce( 'wpmm_nonce' ),
         'site_name'   => get_bloginfo( 'name' ),
         'site_url'    => get_bloginfo( 'url' ),

@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.2
 Requires PHP:      8.0
-Stable tag:        2.4.4
+Stable tag:        2.4.4.1
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -798,6 +798,23 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.4.4.1 =
+* Fix: All AJAX actions on the network admin Updates page returned
+  a 404 error. In v2.4.2 the ajax_url was changed to use
+  network_admin_url('admin-ajax.php') in network admin context,
+  which generates /wp-admin/network/admin-ajax.php — a virtual
+  WordPress routing path that does not physically exist on the
+  server. Reverted to admin_url('admin-ajax.php') which correctly
+  resolves to /wp-admin/admin-ajax.php and works in all contexts.
+* Fix: All AJAX handlers were returning "Permission denied" for
+  super admins in network admin context. The base
+  wpmm_ajax_cap_check() function used current_user_can(
+  wpmm_required_cap()) which returns manage_network in network
+  admin context — WordPress AJAX requests don't carry the network
+  admin context flag so this silently failed. Fixed to check
+  wpmm_access, manage_options, manage_network, and is_super_admin()
+  explicitly covering all contexts.
 
 = 2.4.4 =
 * Fix: "AJAX request failed" error on the network admin Updates page.
