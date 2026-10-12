@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.2
 Requires PHP:      8.0
-Stable tag:        2.4.4.1
+Stable tag:        2.4.5
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -798,6 +798,22 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.4.5 =
+* Fix: Per-item Retry button did not update the amber partial-success
+  banner count after a retry succeeded. The batch run counters
+  (batchSuccessCount, batchFailCount, failedItems, batchResults) were
+  declared with var inside the batch click handler, making them
+  inaccessible to the per-item Retry handler in the same scope. Hoisted
+  all batch counters to the outer jQuery document-ready scope so both
+  handlers share the same variables. The amber banner now correctly
+  updates to reflect the new success/fail totals after each per-item retry.
+* Fix: Administrator note typed in the Update Notes field before clicking
+  Preview was not shown in the pre-send preview modal. The note field
+  selector in the preview handler had a typo (#wpmm-update-note instead of
+  #wpmm-update-notes). Fixed the selector and added the live note display
+  to the pre-send modal using the same amber block style shown in the
+  sent-email preview — so admins can verify their note before sending.
 
 = 2.4.4.1 =
 * Fix: All AJAX actions on the network admin Updates page returned

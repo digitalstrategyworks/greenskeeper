@@ -10,6 +10,17 @@ jQuery(function ($) {
     var performingAdminId   = 0;       // set when updates begin, passed through to email
     var updatesRanThisLoad  = false;   // true only if wpmm_run_update was called this page load
 
+    // Batch run counters — hoisted to outer scope so both the batch handler
+    // and the per-item Retry handler share the same variables. Previously
+    // declared with var inside the batch click handler, which meant the
+    // per-item Retry handler referenced undefined variables and the banner
+    // count never updated correctly after a per-item retry succeeded.
+    var batchSuccessCount   = 0;
+    var batchFailCount      = 0;
+    var batchTotalItems     = 0;
+    var failedItems         = [];
+    var batchResults        = [];
+
     // =========================================================================
     // Date picker (Email Reports page)
     // Appends "for week of: [date]" to the subject line when a date is selected.
@@ -461,12 +472,15 @@ jQuery(function ($) {
         );
         $('#wpmm-global-progress').prop('hidden', false);
 
-        // Track success/fail counts across the batch.
-        var batchSuccessCount = 0;
-        var batchFailCount    = 0;
-        var failedItems       = []; // for retry
-        var batchResults      = []; // collected from AJAX responses, not DOM
-        var totalItems        = items.length; // total items — never changes across retry passes
+        // Reset shared batch counters for this run.
+        // These are declared in the outer scope so the per-item Retry handler
+        // can read and update the same values after a batch completes.
+        batchSuccessCount = 0;
+        batchFailCount    = 0;
+        failedItems       = [];
+        batchResults      = [];
+        batchTotalItems   = items.length; // total items — never changes across retry passes
+        var totalItems    = batchTotalItems; // local alias for readability within this handler
 
         function onItemComplete(itemName, success, resultData) {
             if (success) { batchSuccessCount++; } else {
@@ -711,8 +725,8 @@ jQuery(function ($) {
                                 }
                             });
                             $('#wpmm-success-msg').text(
-                                'All ' + batchSuccessCount + ' of ' + totalItems +
-                                ' update' + (totalItems !== 1 ? 's' : '') + ' completed successfully!'
+                                'All ' + batchSuccessCount + ' of ' + batchTotalItems +
+                                ' update' + (batchTotalItems !== 1 ? 's' : '') + ' completed successfully!'
                             );
                             $('#wpmm-global-success').prop('hidden', false);
                         } else if (batchSuccessCount === 0) {
@@ -723,7 +737,7 @@ jQuery(function ($) {
                             $('#wpmm-global-allfailed').prop('hidden', false);
                         } else {
                             $('#wpmm-partial-msg').html(
-                                '<strong>' + batchSuccessCount + ' of ' + totalItems +
+                                '<strong>' + batchSuccessCount + ' of ' + batchTotalItems +
                                 ' updates completed.</strong> ' + batchFailCount + ' update' +
                                 (batchFailCount !== 1 ? 's' : '') +
                                 ' failed — retry them now, or send the report with successful updates only.'
@@ -2204,7 +2218,7 @@ jQuery(function ($) {
 
         // Collect current form state.
         var sessionId      = $('#wpmm-last-session-id').val() || '';
-        var updateNote     = $('#wpmm-update-note').val() || '';
+        var updateNote     = $('#wpmm-update-notes').val() || '';
         var adminId        = performingAdminId || 0;
         var isResend       = $('#wpmm-is-resend').val() || 0;
         var origSentAt     = $('#wpmm-prior-sent-at').val() || '';
@@ -2236,9 +2250,28 @@ jQuery(function ($) {
             'To: ' + (toEmail || '—') + '  ·  ' + (subject || 'No subject')
         );
 
-        // Show the pre-send footer, hide note block from prior previews.
+        // Show the pre-send footer.
         modalShow($footer);
-        $('#wpmm-modal-note').hide();
+
+        // Show the live note (typed before sending) if the admin filled it in.
+        // Hide it only if the field is empty, so the modal doesn't show a blank block.
+        var $noteBlock = $('#wpmm-modal-note');
+        if (!$noteBlock.length) {
+            $noteBlock = $('<div id="wpmm-modal-note"></div>').insertBefore($iframe);
+        }
+        if (updateNote.trim()) {
+            $noteBlock.html(
+                '<div style="margin:12px 16px 0;padding:12px 16px;background:#fffbeb;' +
+                'border:1px solid #fde68a;border-radius:6px;">' +
+                '<p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#92400e;' +
+                'text-transform:uppercase;letter-spacing:.05em;">Note from administrator</p>' +
+                '<p style="margin:0;font-size:13px;color:#78350f;line-height:1.6;">' +
+                escHtml(updateNote).replace(/\n/g, '<br>') +
+                '</p></div>'
+            ).show();
+        } else {
+            $noteBlock.hide();
+        }
 
         // Open modal.
         $modal.removeClass('wpmm-modal-closed');

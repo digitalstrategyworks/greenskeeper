@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.4.4.1  
+**Version:** 2.4.5  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -704,6 +704,10 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ---
 
 ## Changelog
+
+### 2.4.5
+- Fix: Per-item Retry button did not update the amber partial-success banner count after a successful retry. Batch counters (`batchSuccessCount`, `batchFailCount`, etc.) were scoped inside the batch click handler and inaccessible to the per-item Retry handler. Hoisted to outer scope so both handlers share state correctly.
+- Fix: Administrator note typed in the Update Notes field before clicking Preview was not shown in the pre-send preview modal. A typo in the field selector (`#wpmm-update-note` vs `#wpmm-update-notes`) caused the value to always read as empty. Fixed selector; note now appears in the amber block above the preview iframe when content is present.
 
 ### 2.4.4.1
 - Fix: AJAX 404 on network admin — reverted ajax_url to admin_url
