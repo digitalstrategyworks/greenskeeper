@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.2
 Requires PHP:      8.0
-Stable tag:        2.4.5
+Stable tag:        2.4.6
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -798,6 +798,9 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.4.6 =
+* Fix: Distribution package now correctly excludes the .git directory and other development-only files. No code changes from 2.4.5.
 
 = 2.4.5 =
 * Fix: Per-item Retry button did not update the amber partial-success
